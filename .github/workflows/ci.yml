@@ -16,8 +16,23 @@ jobs:
         with: { node-version: '22' }
       - name: Install BoxLang and dependencies
         run: |
+          set -euo pipefail
           curl -fsSL https://install.boxlang.io | bash -s -- --with-commandbox --without-jre
+
+          # The user installer updates ~/.bash_profile, but Actions does not
+          # reload it in the current non-login shell.
+          export BOXLANG_INSTALL_HOME="$HOME/.local/boxlang"
+          export PATH="$HOME/.local/bin:$HOME/.local/boxlang/bin:$HOME/.boxlang/bin:$PATH"
+
+          # Preserve the environment for following workflow steps.
+          printf '%s\n'             "$HOME/.local/bin"             "$HOME/.local/boxlang/bin"             "$HOME/.boxlang/bin" >> "$GITHUB_PATH"
+          printf 'BOXLANG_INSTALL_HOME=%s\n'             "$BOXLANG_INSTALL_HOME" >> "$GITHUB_ENV"
+
           hash -r
+          command -v boxlang
+          command -v box
+          command -v install-bx-module
+
           box install
           install-bx-module bx-ai@3.4.0 --local
       - name: Static, TestBox, and bx-ai gates
