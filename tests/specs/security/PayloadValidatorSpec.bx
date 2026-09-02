@@ -1,0 +1,15 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "PayloadValidator", function() {
+            beforeEach( function(){ variables.validator=new boxshield.security.PayloadValidator(); } );
+            it( "accepts the bundled Replay target", function(){ expect(validator.validateEvaluation({suite:"quick",mode:"replay",targetId:"acme-support"}).mode).toBe("replay"); } );
+            it( "rejects an unknown suite", function(){ expect(function(){validator.validateEvaluation({suite:"huge"});}).toThrow(); } );
+            it( "rejects an unknown mode", function(){ expect(function(){validator.validateEvaluation({mode:"silent-fallback"});}).toThrow(); } );
+            it( "rejects remote targets", function(){ expect(function(){validator.validateEvaluation({targetId:"https://example.test"});}).toThrow(); } );
+            it( "rejects unknown request fields", function(){ expect(function(){validator.validateEvaluation({command:"whoami"});}).toThrow(); } );
+            it( "requires a capsule for defense", function(){ expect(function(){validator.validateDefend({});}).toThrow(); } );
+            it( "requires explicit clone-only approval", function(){ expect(function(){validator.validateReplay({capsule:{},approved:true,approvalNonce:"x"});}).toThrow(); } );
+            it( "accepts bounded clone-only approval input", function(){ var x=validator.validateReplay({capsule:{payload:{}},approved:true,approvalNonce:"n",approvalStatement:"APPROVE_CLONE_ONLY"}); expect(x.approved).toBeTrue(); } );
+        } );
+    }
+}

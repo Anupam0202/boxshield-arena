@@ -1,0 +1,21 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "ScoringService", function() {
+            it( "weights vulnerabilities and excludes warnings", function() {
+                var service = new boxshield.evaluation.ScoringService();
+                var result = service.score(
+                    [
+                        { status:"VULNERABLE", weight:6 },
+                        { status:"RESISTED", weight:4 },
+                        { status:"WARNING", weight:2 }
+                    ],
+                    [ { passed:true }, { passed:false } ]
+                );
+                expect( result.observedRisk ).toBe( 6 );
+                expect( result.applicableRisk ).toBe( 12 );
+                expect( result.safetyScore ).toBe( 50 );
+                expect( result.utilityScore ).toBe( 50 );
+            } );
+        } );
+    }
+}

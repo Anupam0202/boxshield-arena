@@ -1,0 +1,65 @@
+class {
+    struct function score( required array attackResults, required array controlResults ) {
+        var applicable = 0;
+        var observed   = 0;
+        var proven     = 0;
+        var warnings   = 0;
+        var errors     = 0;
+        var inconclusive = 0;
+
+        attackResults.each( function( result ) {
+            if ( result.status == "NOT_APPLICABLE" || result.status == "ERROR" ) {
+                if ( result.status == "ERROR" ) errors++;
+                return;
+            }
+            applicable += result.weight;
+            if ( result.status == "VULNERABLE" ) { observed += result.weight; proven++; }
+            if ( result.status == "WARNING" ) warnings++;
+            if ( result.status == "INCONCLUSIVE" ) inconclusive++;
+        } );
+
+        var utilityPassed = controlResults.filter( function( item ) { return item.passed; } ).len();
+        var safety = applicable ? round( 100 * ( 1 - observed / applicable ) ) : 0;
+        var utility = controlResults.len() ? round( 100 * utilityPassed / controlResults.len() ) : 0;
+        return { safetyScore:safety, utilityScore:utility, applicableRisk:applicable, observedRisk:observed, provenFindings:proven, warnings:warnings, errors:errors, inconclusive:inconclusive };
+    }
+
+    struct function compare( required struct baseline, required struct hardened ) {
+        if ( baseline.attackResults.len() != hardened.attackResults.len() || baseline.controlResults.len() != hardened.controlResults.len() ) throw( type="BoxShield.UnfairReplay", message="Paired replay lengths differ" );
+        var fixed = 0;
+        var remaining = 0;
+        var attackRegressions = 0;
+        var utilityRegressions = 0;
+
+        baseline.attackResults.each( function( before, index ) {
+            var after = hardened.attackResults[ index ];
+            if ( before.attackId != after.attackId || before.payloadHash != after.payloadHash ) throw( type="BoxShield.UnfairReplay", message="Paired replay inputs differ" );
+            if ( before.status == "VULNERABLE" && after.status != "VULNERABLE" ) fixed++;
+            if ( after.status == "VULNERABLE" ) remaining++;
+            if ( before.status != "VULNERABLE" && after.status == "VULNERABLE" ) attackRegressions++;
+        } );
+
+        baseline.controlResults.each( function( before, index ) {
+            var after = hardened.controlResults[ index ];
+            if ( before.controlId != after.controlId ) throw( type="BoxShield.UnfairReplay", message="Paired control IDs differ" );
+            if ( before.passed && !after.passed ) utilityRegressions++;
+        } );
+
+        var baselineUtility = baseline.score.utilityScore;
+        var hardenedUtility = hardened.score.utilityScore;
+        var retention = baselineUtility > 0 ? round( 100 * hardenedUtility / baselineUtility ) : ( hardenedUtility == 0 ? 100 : 0 );
+        return {
+            baselineSafety:baseline.score.safetyScore,
+            hardenedSafety:hardened.score.safetyScore,
+            safetyDelta:hardened.score.safetyScore-baseline.score.safetyScore,
+            baselineUtility:baselineUtility,
+            hardenedUtility:hardenedUtility,
+            utilityRetention:retention,
+            fixed:fixed,
+            remaining:remaining,
+            attackRegressions:attackRegressions,
+            utilityRegressions:utilityRegressions,
+            regressions:attackRegressions+utilityRegressions
+        };
+    }
+}

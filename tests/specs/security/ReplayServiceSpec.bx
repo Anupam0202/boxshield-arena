@@ -1,0 +1,11 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "ReplayService", function() {
+            it( "loads a truthful recorded fixture", function(){ var f=new boxshield.evaluation.ReplayService().loadFixture(); expect(f.mode).toBe("RECORDED_REPLAY"); expect(f.sourceMode).toBe("SCRIPTED_FIXTURE"); } );
+            it( "verifies exact payload and output hashes", function(){ expect(function(){new boxshield.evaluation.ReplayService().assertPaired(new boxshield.evaluation.ReplayService().loadFixture());}).notToThrow(); } );
+            it( "rejects a changed payload hash", function(){ var f=new boxshield.evaluation.ReplayService().loadFixture(); f.results[1].payloadHash="sha256:bad"; expect(function(){new boxshield.evaluation.ReplayService().assertPaired(f);}).toThrow(); } );
+            it( "selects and orders frozen IDs", function(){ var s=new boxshield.evaluation.ReplayService(); var f=s.loadFixture(); var picked=s.select(f,["ATK-004","ATK-001"],["CTRL-002"]); expect(picked.results[1].attackId).toBe("ATK-004"); expect(picked.results[2].attackId).toBe("ATK-001"); } );
+            it( "rejects unknown frozen IDs", function(){ var s=new boxshield.evaluation.ReplayService(); expect(function(){s.select(s.loadFixture(),["ATK-404"],["CTRL-001"]);}).toThrow(); } );
+        } );
+    }
+}

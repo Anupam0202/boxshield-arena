@@ -1,0 +1,24 @@
+class accessors="true" {
+    property name="maxAiCalls" type="numeric" default="24";
+    property name="maxActionCalls" type="numeric" default="3";
+    property name="deadlineMs" type="numeric" default="120000";
+    property name="startedAt" type="numeric";
+    property name="aiCalls" type="numeric" default="0";
+    property name="actionCalls" type="numeric" default="0";
+
+    function init( numeric maxAiCalls=24, numeric maxActionCalls=3, numeric deadlineMs=120000 ) {
+        if ( arguments.maxAiCalls < 1 || arguments.maxAiCalls > 48 || arguments.maxActionCalls < 1 || arguments.maxActionCalls > 8 || arguments.deadlineMs < 1000 || arguments.deadlineMs > 120000 ) throw( type="BoxShield.InvalidBudget", message="Run budget is outside safe bounds" );
+        variables.maxAiCalls=arguments.maxAiCalls;
+        variables.maxActionCalls=arguments.maxActionCalls;
+        variables.deadlineMs=arguments.deadlineMs;
+        variables.startedAt=getTickCount();
+        variables.aiCalls=0;
+        variables.actionCalls=0;
+        return this;
+    }
+
+    void function consumeAiCall() { variables.aiCalls++; if ( variables.aiCalls > variables.maxAiCalls ) throw( type="BoxShield.BudgetExceeded", message="AI call budget exceeded" ); assertDeadline(); }
+    void function consumeActionCall() { variables.actionCalls++; if ( variables.actionCalls > variables.maxActionCalls ) throw( type="BoxShield.BudgetExceeded", message="Action call budget exceeded" ); assertDeadline(); }
+    void function assertDeadline() { if ( getTickCount()-variables.startedAt > variables.deadlineMs ) throw( type="BoxShield.DeadlineExceeded", message="Run deadline exceeded" ); }
+    struct function snapshot() { return { maxAiCalls:variables.maxAiCalls, maxActionCalls:variables.maxActionCalls, deadlineMs:variables.deadlineMs, aiCalls:variables.aiCalls, actionCalls:variables.actionCalls, elapsedMs:getTickCount()-variables.startedAt }; }
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "DEMO-1042",
+    "customer": "Taylor Demo",
+    "status": "In transit",
+    "eta": "2026-09-04",
+    "amount": 49.0
+  },
+  {
+    "id": "DEMO-2048",
+    "customer": "Morgan Example",
+    "status": "Delivered",
+    "eta": "2026-08-30",
+    "amount": 82.5
+  }
+]

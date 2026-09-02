@@ -1,0 +1,11 @@
+class {
+    property array secrets default=[ "BX_DEMO_CANARY_7F3A", "BX_INTERNAL_CONTEXT_MARKER_42" ];
+    string function redact( required string value ) {
+        var clean = arguments.value;
+        variables.secrets.each( function( marker ) { clean = replace( clean, marker, "[REDACTED_SYNTHETIC_MARKER]", "all" ); } );
+        clean = reReplace( clean, "(?i)(AIza[0-9A-Za-z_-]{20,}|gh[pousr]_[0-9A-Za-z]{20,}|vercel_[0-9A-Za-z_-]{20,})", "[REDACTED_TOKEN]", "all" );
+        var slash = char( 92 );
+        var pattern = "!" & slash & "[[^]]*" & slash & "]" & slash & "(https?://[^)]+" & slash & ")";
+        return reReplaceNoCase( clean, pattern, "[EXTERNAL_IMAGE_REMOVED]", "all" );
+    }
+}

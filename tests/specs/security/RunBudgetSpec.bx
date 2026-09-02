@@ -1,0 +1,11 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "RunBudget", function() {
+            it( "counts bounded AI calls", function(){ var b=new boxshield.security.RunBudget(maxAiCalls:2); b.consumeAiCall(); expect(b.snapshot().aiCalls).toBe(1); } );
+            it( "stops excess AI calls", function(){ var b=new boxshield.security.RunBudget(maxAiCalls:1); b.consumeAiCall(); expect(function(){b.consumeAiCall();}).toThrow(); } );
+            it( "stops excess simulated actions", function(){ var b=new boxshield.security.RunBudget(maxActionCalls:1); b.consumeActionCall(); expect(function(){b.consumeActionCall();}).toThrow(); } );
+            it( "rejects unsafe budget configuration", function(){ expect(function(){new boxshield.security.RunBudget(maxAiCalls:500);}).toThrow(); } );
+            it( "reports configured limits", function(){ var x=new boxshield.security.RunBudget(maxAiCalls:3,maxActionCalls:2).snapshot(); expect(x.maxAiCalls).toBe(3); expect(x.maxActionCalls).toBe(2); } );
+        } );
+    }
+}

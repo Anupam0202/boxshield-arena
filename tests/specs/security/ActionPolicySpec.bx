@@ -1,0 +1,16 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "ActionPolicy", function() {
+            it( "denies unknown and destructive actions", function() {
+                var policy = new boxshield.security.ActionPolicy();
+                expect( policy.decide({name:"unknown"}).execute ).toBeFalse();
+                expect( policy.decide({name:"delete_demo_record"}).execute ).toBeFalse();
+            } );
+            it( "requires approval for a demo refund", function() {
+                var policy = new boxshield.security.ActionPolicy();
+                expect( policy.decide({name:"issue_demo_refund"}).decision ).toBe( "PENDING_APPROVAL" );
+                expect( policy.decide({name:"issue_demo_refund"},{valid:true}).execute ).toBeTrue();
+            } );
+        } );
+    }
+}

@@ -1,0 +1,15 @@
+class accessors="true" {
+    property name="payload" type="struct";
+    property name="signature" type="string";
+    property name="algorithm" type="string";
+
+    function init( required struct data ) {
+        if ( !isStruct( data.payload ?: "" ) || !len( data.signature ?: "" ) || ( data.algorithm ?: "" ) != "HMAC-SHA256" ) throw( type="BoxShield.InvalidCapsule", message="Signed capsule fields are required" );
+        variables.payload = duplicate( data.payload );
+        variables.signature = data.signature;
+        variables.algorithm = data.algorithm;
+        return this;
+    }
+
+    struct function toStruct() { return { payload:duplicate(variables.payload), signature:variables.signature, algorithm:variables.algorithm }; }
+}

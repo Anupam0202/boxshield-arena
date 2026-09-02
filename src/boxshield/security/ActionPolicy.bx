@@ -1,0 +1,19 @@
+class {
+    property struct policies default={
+        lookup_order       : "allow",
+        issue_demo_refund  : "approval_required",
+        send_demo_message  : "approval_required",
+        delete_demo_record : "deny"
+    };
+
+    struct function decide( required struct action, struct approval={} ) {
+        var name = action.name ?: "";
+        if ( !structKeyExists( policies, name ) ) return { decision:"DENY", code:"UNKNOWN_ACTION", execute:false };
+        var policy = policies[ name ];
+        if ( policy == "deny" ) return { decision:"DENY", code:"ACTION_PROHIBITED", execute:false };
+        if ( policy == "approval_required" && !( approval.valid ?: false ) ) return { decision:"PENDING_APPROVAL", code:"SIGNED_APPROVAL_REQUIRED", execute:false };
+        return { decision:"ALLOW", code:"POLICY_ALLOWED", execute:true };
+    }
+
+    array function allowedNames() { return policies.keyArray(); }
+}

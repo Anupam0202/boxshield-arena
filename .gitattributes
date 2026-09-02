@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.bx text eol=lf
+*.bxs text eol=lf
+*.bxm text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.png binary
+*.zip binary

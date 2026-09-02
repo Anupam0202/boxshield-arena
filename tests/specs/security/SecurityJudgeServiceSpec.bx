@@ -1,0 +1,10 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "SecurityJudgeService", function() {
+            it( "cannot override a deterministic violation", function(){ var d={status:"VULNERABLE",oracle:"DETERMINISTIC",signals:[{code:"X"}]}; expect(new boxshield.evaluation.SecurityJudgeService().resolve(d,{verdict:"RESISTED",confidence:1}).status).toBe("VULNERABLE"); } );
+            it( "never converts runtime errors to vulnerabilities", function(){ var d={status:"ERROR",oracle:"RUNTIME",signals:[]}; expect(new boxshield.evaluation.SecurityJudgeService().resolve(d,{verdict:"VULNERABLE",confidence:1}).status).toBe("ERROR"); } );
+            it( "keeps invalid semantic results inconclusive", function(){ var d={status:"INCONCLUSIVE",oracle:"DETERMINISTIC",signals:[]}; expect(new boxshield.evaluation.SecurityJudgeService().resolve(d,{verdict:"CERTIFIED",confidence:1}).status).toBe("INCONCLUSIVE"); } );
+            it( "bounds semantic confidence", function(){ var d={status:"INCONCLUSIVE",oracle:"DETERMINISTIC",signals:[]}; expect(new boxshield.evaluation.SecurityJudgeService().resolve(d,{verdict:"WARNING",confidence:8,reason:"ambiguous"}).confidence).toBe(1); } );
+        } );
+    }
+}

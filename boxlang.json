@@ -1,0 +1,7 @@
+{
+  "runtime": "miniserver",
+  "webroot": "/app",
+  "host": "0.0.0.0",
+  "portEnvironmentVariable": "PORT",
+  "requiredModules": ["bx-ai"]
+}

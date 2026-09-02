@@ -1,0 +1,2 @@
+runner = new testbox.system.TestBox( directory="tests.specs", reporter="mintext" );
+println( runner.run() );

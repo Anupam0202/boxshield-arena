@@ -1,0 +1,100 @@
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Base64;
+
+class {
+    property string algorithm default="HmacSHA256";
+    property string key;
+    property numeric maxCapsuleBytes default=524288;
+    property numeric maxLifetimeSeconds default=900;
+
+    function init( required string signingKey ) {
+        if ( len( arguments.signingKey ) < 32 ) throw( type="BoxShield.WeakSigningKey", message="Signing key must be at least 32 characters" );
+        variables.key = arguments.signingKey;
+        return this;
+    }
+
+    struct function sign( required struct payload ) {
+        validateTemporalClaims( arguments.payload );
+        var capsule = {
+            payload   : duplicate( arguments.payload ),
+            signature : base64Url( hmacBytes( canonicalJSON( arguments.payload ) ) ),
+            algorithm : "HMAC-SHA256"
+        };
+        if ( len( jsonSerialize( capsule ) ) > maxCapsuleBytes ) throw( type="BoxShield.CapsuleTooLarge", message="Run capsule exceeds 512 KB" );
+        return capsule;
+    }
+
+    boolean function verify( required struct capsule ) {
+        try {
+            if ( len( jsonSerialize( arguments.capsule ) ) > maxCapsuleBytes ) return false;
+            if ( ( capsule.algorithm ?: "" ) != "HMAC-SHA256" ) return false;
+            if ( !isStruct( capsule.payload ?: "" ) || !len( capsule.signature ?: "" ) ) return false;
+            validateTemporalClaims( capsule.payload );
+            var expected = hmacBytes( canonicalJSON( capsule.payload ) );
+            var supplied = Base64.getUrlDecoder().decode( capsule.signature );
+            return MessageDigest.isEqual( expected, supplied );
+        } catch ( any ignored ) {
+            return false;
+        }
+    }
+
+    string function fingerprint( required any value ) {
+        return "sha256:" & lCase( hash( canonicalJSON( arguments.value ), "SHA-256" ) );
+    }
+
+    private void function validateTemporalClaims( required struct payload ) {
+        var requiredKeys = [ "schemaVersion", "stage", "runId", "targetId", "targetVersion", "corpusVersion", "orderedAttackIds", "orderedControlIds", "issuedAtEpoch", "expiresAtEpoch", "approvalNonce" ];
+        requiredKeys.each( function( key ) {
+            if ( !structKeyExists( payload, key ) ) throw( type="BoxShield.InvalidCapsule", message="Required capsule claim is missing" );
+        } );
+        if ( payload.schemaVersion != "1.0.0" ) throw( type="BoxShield.InvalidCapsule", message="Unsupported capsule schema" );
+        if ( !isArray( payload.orderedAttackIds ) || !isArray( payload.orderedControlIds ) ) throw( type="BoxShield.InvalidCapsule", message="Ordered run IDs must be arrays" );
+        var nowEpoch = dateDiff( "s", createDateTime( 1970,1,1,0,0,0 ), now() );
+        if ( payload.issuedAtEpoch > nowEpoch + 60 ) throw( type="BoxShield.InvalidCapsule", message="Capsule issued in the future" );
+        if ( payload.expiresAtEpoch < nowEpoch ) throw( type="BoxShield.ExpiredCapsule", message="Capsule expired" );
+        if ( payload.expiresAtEpoch <= payload.issuedAtEpoch || payload.expiresAtEpoch - payload.issuedAtEpoch > maxLifetimeSeconds ) throw( type="BoxShield.InvalidCapsule", message="Capsule lifetime is invalid" );
+        if ( !len( trim( payload.runId ) ) || !len( trim( payload.approvalNonce ) ) ) throw( type="BoxShield.InvalidCapsule", message="Run and nonce claims are required" );
+    }
+
+    private binary function hmacBytes( required string value ) {
+        var hmacEngine = Mac.getInstance( variables.algorithm );
+        hmacEngine.init(
+            new SecretKeySpec(
+                variables.key.getBytes( StandardCharsets.UTF_8 ),
+                variables.algorithm
+            )
+        );
+        return hmacEngine.doFinal(
+            arguments.value.getBytes( StandardCharsets.UTF_8 )
+        );
+    }
+
+    private string function base64Url( required binary value ) {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString( arguments.value );
+    }
+
+    private string function canonicalJSON( required any value ) {
+        return jsonSerialize( canonicalize( arguments.value ) );
+    }
+
+    private any function canonicalize( required any value ) {
+        var sourceValue = arguments.value;
+        if ( isStruct( sourceValue ) ) {
+            var ordered = structNew( "ordered" );
+            var keys = sourceValue.keyArray();
+            keys.sort( "text" );
+            keys.each( function( itemKey ) {
+                ordered[ itemKey ] = canonicalize( sourceValue[ itemKey ] );
+            } );
+            return ordered;
+        }
+        if ( isArray( sourceValue ) ) {
+            return sourceValue.map( function( item ) { return canonicalize( item ); } );
+        }
+        return sourceValue;
+    }
+
+}

@@ -1,0 +1,46 @@
+class {
+    property array requiredAttackKeys default=[ "id", "version", "title", "category", "owasp", "objective", "severity", "weight", "payload", "expectedInvariant", "successSignals", "resistanceSignals", "safeExecution", "applicableDefense", "scope" ];
+    property array requiredControlKeys default=[ "id", "version", "title", "category", "severity", "weight", "payload", "expectedInvariant", "expectedAnswer", "safeExecution", "scope" ];
+    property struct severityWeights default={ low:1, medium:2, high:4, critical:6 };
+
+    struct function load( string path=expandPath( "/data/attacks-v1.json" ) ) {
+        if ( !fileExists( arguments.path ) ) throw( type="BoxShield.CorpusMissing", message="Attack corpus not found" );
+        var corpus = jsonDeserialize( fileRead( arguments.path ) );
+        validate( corpus );
+        return corpus;
+    }
+
+    void function validate( required struct corpus ) {
+        if ( corpus.schemaVersion != "1.0.0" || !isArray( corpus.attacks ?: "" ) || !isArray( corpus.controls ?: "" ) ) throw( type="BoxShield.InvalidCorpus", message="Unsupported corpus schema" );
+        if ( corpus.attacks.len() > 12 || corpus.controls.len() < 2 || corpus.controls.len() > 10 ) throw( type="BoxShield.InvalidCorpus", message="Corpus size is outside the safe evaluation bounds" );
+        var seen = {};
+        corpus.attacks.each( function( attack ) {
+            validateKeys( attack, requiredAttackKeys );
+            validateIdentity( attack, seen );
+            if ( !structKeyExists( severityWeights, lCase(attack.severity) ) || attack.weight != severityWeights[lCase(attack.severity)] ) throw( type="BoxShield.InvalidAttack", message="Severity weight mismatch" );
+            if ( len( attack.payload ) > 8000 || !attack.successSignals.len() || !attack.resistanceSignals.len() || !attack.applicableDefense.len() ) throw( type="BoxShield.InvalidAttack", message="Attack evidence metadata is incomplete or unbounded" );
+        } );
+        corpus.controls.each( function( control ) {
+            validateKeys( control, requiredControlKeys );
+            validateIdentity( control, seen );
+            if ( len( control.payload ) > 8000 ) throw( type="BoxShield.InvalidControl", message="Control payload exceeds safe bound" );
+        } );
+    }
+
+    struct function select( required struct corpus, string suite="quick" ) {
+        var wanted = lCase( arguments.suite );
+        if ( wanted == "full" ) return { attacks:corpus.attacks, controls:corpus.controls };
+        if ( wanted != "quick" ) throw( type="BoxShield.InvalidSuite", message="Suite must be quick or full" );
+        var attacks = corpus.attacks.filter( function( item ) { return item.scope.findNoCase( "quick" ) || item.scope.findNoCase( "adaptive" ); } );
+        return { attacks:attacks, controls:[corpus.controls[1]] };
+    }
+
+    private void function validateKeys( required struct item, required array requiredKeys ) {
+        requiredKeys.each( function( key ) { if ( !structKeyExists( item, key ) ) throw( type="BoxShield.InvalidCorpusItem", message="Corpus item field is missing" ); } );
+    }
+
+    private void function validateIdentity( required struct item, required struct seen ) {
+        if ( !len( item.id ?: "" ) || !len( item.version ?: "" ) || structKeyExists( seen, item.id ) ) throw( type="BoxShield.InvalidCorpusItem", message="Corpus IDs must be stable and unique" );
+        seen[ item.id ] = true;
+    }
+}

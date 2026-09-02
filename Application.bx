@@ -1,0 +1,36 @@
+class {
+    this.name               = "BoxShieldArena";
+    this.applicationTimeout = createTimeSpan( 1, 0, 0, 0 );
+    this.sessionManagement  = false;
+    this.setClientCookies   = false;
+    this.mappings           = { "/boxshield" : expandPath( "/src/boxshield" ) };
+
+    boolean function onApplicationStart() {
+        var configuredKey = getSystemSetting( "RUN_STATE_SIGNING_KEY", "" );
+        var isEphemeral = !len( configuredKey );
+        if ( isEphemeral && len( getSystemSetting( "VERCEL", "" ) ) ) throw( type="BoxShield.MissingProductionSigningKey", message="RUN_STATE_SIGNING_KEY is mandatory in production" );
+        application.boxshield = {
+            name                     : "BoxShield Arena",
+            version                  : "1.1.0",
+            startedAt                : now(),
+            mode                     : "replay",
+            signingKey               : isEphemeral ? hash( createUUID() & now(), "SHA-256" ) : configuredKey,
+            signingKeyIsEphemeral    : isEphemeral,
+            consumedApprovalNonces   : {},
+            liveRate                 : {}
+        };
+        return true;
+    }
+
+    boolean function onRequestStart( required string targetPage ) {
+        if ( !structKeyExists( application, "boxshield" ) ) onApplicationStart();
+        request.boxshieldRequestId = createUUID();
+        return true;
+    }
+
+    void function onError( required any exception, required string eventName ) {
+        var requestId = "unknown";
+        try { requestId = request.boxshieldRequestId ?: "unknown"; } catch ( any ignored ) {}
+        new boxshield.security.SafeLogger().event({ requestId:requestId, endpoint:arguments.eventName, status:"ERROR", errorCode:"UNHANDLED_EXCEPTION" }, "error" );
+    }
+}

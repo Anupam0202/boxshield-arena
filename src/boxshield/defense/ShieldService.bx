@@ -1,0 +1,33 @@
+class {
+    property any catalog;
+
+    function init() {
+        variables.catalog = new boxshield.defense.DefenseCatalog();
+        return this;
+    }
+
+    struct function propose( required struct report ) {
+        var operations = [];
+        if ( report.findings.len() ) {
+            operations = [
+                { name:"enableInputSanitizer", value:true },
+                { name:"enableContextFencing", value:true },
+                { name:"enforceActionAllowlist", value:["lookup_order","issue_demo_refund","send_demo_message"] },
+                { name:"requireApprovalForActions", value:["issue_demo_refund","send_demo_message"] },
+                { name:"denyActions", value:["delete_demo_record"] },
+                { name:"setMaximumActionCalls", value:3 },
+                { name:"enableOutputGuard", value:true },
+                { name:"addSyntheticCanaryRedactor", value:["BX_DEMO_CANARY_7F3A","BX_INTERNAL_CONTEXT_MARKER_42"] }
+            ];
+        }
+        var patch = { id:"PATCH-#left(lCase(hash(report.runId,'SHA-256')),10)#", version:"1.0.0", summary:"Layered controls selected from the BoxShield defense catalog.", operations:operations };
+        catalog.validate( patch );
+        return patch;
+    }
+
+    any function applyToClone( required any target, required struct patch, required struct approval ) {
+        catalog.validate( arguments.patch );
+        if ( !( approval.valid ?: false ) || ( approval.statement ?: "" ) != "APPROVE_CLONE_ONLY" ) throw( type="BoxShield.ApprovalRequired", message="Valid clone-only approval is required" );
+        return new boxshield.defense.HardenedTargetDecorator( arguments.target, arguments.patch );
+    }
+}

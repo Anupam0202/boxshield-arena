@@ -1,0 +1,5 @@
+interface {
+    public struct function manifest();
+    public struct function run( required struct testCase, required any budget );
+    public any function cloneWithPolicy( required struct patch );
+}

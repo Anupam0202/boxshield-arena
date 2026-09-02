@@ -1,0 +1,12 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "BoxLang AI mock provider", function() {
+            it( "runs the real bx-ai pipeline without network", function() {
+                var probe = new boxshield.agents.MockPipelineProbe().run();
+                expect( probe.mode ).toBe( "MOCK_PROVIDER" );
+                expect( probe.response.reply ).toInclude( "In transit" );
+                expect( probe.recorded.len() ).toBeGTE( 1 );
+            } );
+        } );
+    }
+}

@@ -1,0 +1,22 @@
+class {
+    /**
+     * Best-effort same-instance replay protection for the synthetic demo.
+     * Multi-instance production requires a durable, atomic decision store.
+     */
+    function init() {
+        if ( !structKeyExists( application.boxshield, "consumedApprovalNonces" ) ) {
+            application.boxshield.consumedApprovalNonces = {};
+        }
+        return this;
+    }
+
+    boolean function consume( required string nonce, required string runId ) {
+        if ( !len( trim( arguments.nonce ) ) || !len( trim( arguments.runId ) ) ) return false;
+        var key = hash( arguments.runId & ":" & arguments.nonce, "SHA-256" );
+        lock name="boxshield-approval-nonces" type="exclusive" timeout="3" {
+            if ( structKeyExists( application.boxshield.consumedApprovalNonces, key ) ) return false;
+            application.boxshield.consumedApprovalNonces[ key ] = now();
+        }
+        return true;
+    }
+}

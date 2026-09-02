@@ -1,0 +1,180 @@
+<bx:header name="Content-Security-Policy" value="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<bx:header name="X-Content-Type-Options" value="nosniff">
+<bx:header name="Referrer-Policy" value="no-referrer">
+<bx:header name="Permissions-Policy" value="camera=(), microphone=(), geolocation=(), payment=()">
+<bx:header name="Cross-Origin-Resource-Policy" value="same-origin">
+<bx:header name="Cache-Control" value="no-store">
+<!doctype html>
+<html lang="en" data-runtime="boxlang">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="BoxShield Arena safely attacks, patches, and replays evaluations against a synthetic BoxLang AI agent.">
+  <title>BoxShield Arena — Attack. Patch. Replay. Prove.</title>
+  <link rel="stylesheet" href="web/assets/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <div class="ambient ambient-a" aria-hidden="true"></div>
+  <div class="ambient ambient-b" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand" href="#" aria-label="BoxShield Arena home">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="brand-name">BOX<span>SHIELD</span></span>
+      <span class="brand-product">ARENA</span>
+    </a>
+    <nav aria-label="Primary">
+      <a href="#workflow">Workflow</a>
+      <a href="#evidence">Evidence</a>
+      <a href="#methodology">Methodology</a>
+    </nav>
+    <div class="mode-pill"><i></i><span id="mode-label">RECORDED REPLAY</span></div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="eyebrow"><span>FIU BOXLANG + AI HACKATHON</span><b>CHALLENGE 05 · BREAK ME</b></div>
+      <div class="hero-grid">
+        <div>
+          <h1 id="hero-title">Break your agent<br><span>before the real world does.</span></h1>
+          <p class="hero-copy">BoxShield Arena attacks a synthetic BoxLang AI agent, proves failures with deterministic evidence, applies a human-approved shield, and replays the exact same tests.</p>
+          <div class="hero-actions">
+            <button class="button primary" id="launch-btn">Launch Quick Arena <span aria-hidden="true">→</span></button>
+            <button class="button ghost" id="load-report-btn">View recorded evidence</button>
+          </div>
+          <div class="trust-row" aria-label="Product guarantees">
+            <span>✓ Synthetic actions only</span><span>✓ Exact paired replay</span><span>✓ Utility-aware scoring</span>
+          </div>
+        </div>
+        <div class="hero-panel" aria-label="Recorded evaluation summary">
+          <div class="hero-panel-top"><span>RECORDED ARENA</span><span class="live-dot">SAFE REPLAY</span></div>
+          <div class="dial-wrap">
+            <div class="dial baseline"><strong id="hero-base-score">26</strong><span>BASELINE<br>SAFETY</span></div>
+            <div class="delta-arrow" aria-hidden="true"><span>+63</span>→</div>
+            <div class="dial hardened"><strong id="hero-hard-score">89</strong><span>HARDENED<br>SAFETY</span></div>
+          </div>
+          <div class="mini-grid">
+            <div><strong>9</strong><span>ATTACKS</span></div>
+            <div><strong>5</strong><span>UTILITY CONTROLS</span></div>
+            <div><strong>80%</strong><span>UTILITY RETAINED</span></div>
+          </div>
+          <p>Fixture: <code>scripted-fixture-v1.1</code> · n=1</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="notice" aria-label="Responsible use notice">
+      <div class="notice-icon" aria-hidden="true">!</div>
+      <div><strong>AUTHORIZED DEFENSIVE TESTING ONLY</strong><p>Bundled targets, records, secrets, and actions are synthetic. A passing evaluation is not a security certification.</p></div>
+      <span>NO REMOTE TARGETS</span>
+    </section>
+
+    <section class="workflow" id="workflow" aria-labelledby="workflow-title">
+      <div class="section-heading">
+        <div><span class="kicker">THE ARENA WORKFLOW</span><h2 id="workflow-title">Attack. Patch. Replay. Prove.</h2></div>
+        <p>AI proposes. BoxLang validates, authorizes, measures, and records.</p>
+      </div>
+
+      <div class="stepper" role="tablist" aria-label="Evaluation stages">
+        <button class="step active" role="tab" aria-selected="true" data-stage="target"><span>01</span><b>TARGET</b><small>Select agent</small></button>
+        <button class="step" role="tab" aria-selected="false" data-stage="attack"><span>02</span><b>ATTACK</b><small>Run corpus</small></button>
+        <button class="step" role="tab" aria-selected="false" data-stage="prove"><span>03</span><b>PROVE</b><small>Verify evidence</small></button>
+        <button class="step" role="tab" aria-selected="false" data-stage="shield"><span>04</span><b>SHIELD</b><small>Approve patch</small></button>
+        <button class="step" role="tab" aria-selected="false" data-stage="replay"><span>05</span><b>REPLAY</b><small>Compare</small></button>
+      </div>
+
+      <div class="stage-shell">
+        <section class="stage-panel active" id="stage-target" data-panel="target" aria-labelledby="target-title">
+          <div class="panel-head"><div><span class="panel-number">01</span><div><small>SELECT A SANDBOXED TARGET</small><h3 id="target-title">Acme Support Agent</h3></div></div><span class="badge synthetic">SYNTHETIC TARGET</span></div>
+          <div class="target-grid">
+            <article class="target-card selected">
+              <div class="agent-icon" aria-hidden="true">A</div>
+              <div class="target-title-row"><div><h4>Acme Support Agent</h4><p>BoxLang AI · support workflow</p></div><span>SELECTED</span></div>
+              <p>Answers questions about fake orders and proposes safe, simulated support actions.</p>
+              <div class="capabilities"><span>lookup_order</span><span>demo_refund</span><span>demo_message</span></div>
+              <div class="target-warning"><b>VULNERABLE CONFIGURATION</b><p>Untrusted document concatenation · weak action checks · no canary guard · excessive call budget</p></div>
+            </article>
+            <aside class="run-config">
+              <h4>Run configuration</h4>
+              <label for="scan-size">Evaluation suite</label>
+              <select id="scan-size"><option value="quick">Quick Arena · 8 cases</option><option value="full">Full Arena · 14 cases</option></select>
+              <label for="provider-mode">Provider mode</label>
+              <select id="provider-mode"><option value="replay">Recorded Replay · no API key</option><option value="mock" disabled>Mock Provider · run through BoxLang test suite</option><option value="live" disabled>Live Gemini · not configured</option></select>
+              <div class="config-row"><span>Remote target adapter</span><b class="off">DISABLED</b></div>
+              <div class="config-row"><span>Maximum adaptive attacks</span><b>1</b></div>
+              <div class="config-row"><span>Hard run deadline</span><b>120s</b></div>
+              <button class="button primary wide" id="start-scan-btn">Start authorized scan <span aria-hidden="true">→</span></button>
+            </aside>
+          </div>
+        </section>
+
+        <section class="stage-panel" id="stage-attack" data-panel="attack" aria-labelledby="attack-title" hidden>
+          <div class="panel-head"><div><span class="panel-number">02</span><div><small>BOUNDED ADVERSARIAL EVALUATION</small><h3 id="attack-title">Attack timeline</h3></div></div><div class="run-state" id="run-state"><i></i> READY</div></div>
+          <div class="progress-track" aria-label="Scan progress"><div id="progress-bar"></div></div>
+          <div class="timeline-summary"><span id="progress-text">0 / 0 tests completed</span><span id="run-clock">00:00.0</span></div>
+          <div class="attack-list" id="attack-list" aria-live="polite"></div>
+          <div class="empty-state" id="attack-empty"><div class="radar" aria-hidden="true"><i></i></div><p>Start the arena to execute the versioned corpus.</p></div>
+        </section>
+
+        <section class="stage-panel" id="stage-prove" data-panel="prove" aria-labelledby="prove-title" hidden>
+          <div class="panel-head"><div><span class="panel-number">03</span><div><small>DETERMINISTIC-FIRST EVIDENCE</small><h3 id="prove-title">Baseline security report</h3></div></div><span class="badge">OWASP-INFORMED</span></div>
+          <div class="score-strip">
+            <div class="score-block danger"><span>BASELINE SAFETY</span><strong id="baseline-score">—</strong><small>/ 100</small></div>
+            <div class="score-block"><span>UTILITY SCORE</span><strong id="baseline-utility">—</strong><small>/ 100</small></div>
+            <div class="score-block"><span>PROVEN FINDINGS</span><strong id="finding-count">—</strong><small>DETERMINISTIC</small></div>
+            <div class="score-block"><span>EXECUTION MODE</span><strong class="mode-value">REPLAY</strong><small>n = 1</small></div>
+          </div>
+          <div class="evidence-grid"><div><h4>Findings</h4><div id="findings-list"></div></div><aside><h4>Evidence contract</h4><ul class="check-list"><li>Exact marker detection</li><li>Action-policy decisions</li><li>Payload and response hashes</li><li>Errors excluded from risk</li><li>AI interpretation labeled</li></ul><button class="button ghost wide" id="download-json">Download JSON evidence</button><button class="button ghost wide" id="download-md">Download Markdown report</button></aside></div>
+        </section>
+
+        <section class="stage-panel" id="stage-shield" data-panel="shield" aria-labelledby="shield-title" hidden>
+          <div class="panel-head"><div><span class="panel-number">04</span><div><small>HUMAN-APPROVED DEFENDER</small><h3 id="shield-title">Review GuardrailPatch</h3></div></div><span class="badge proposed">DECLARATIVE ONLY</span></div>
+          <div class="shield-grid"><div><div class="defender-card"><div class="defender-icon" aria-hidden="true">◆</div><div><small>DEFENDER AGENT PROPOSAL</small><h4>Layered synthetic-target hardening</h4><p id="patch-summary">Generate the baseline report first.</p></div></div><div class="patch-list" id="patch-list"></div></div><aside class="approval-card"><span class="shield-art" aria-hidden="true">⬡</span><h4>Human approval gate</h4><p>The Defender can select allowlisted policy operations, but cannot apply them or emit executable patches.</p><label class="approval-check"><input type="checkbox" id="approval-check"><span>I reviewed the controls and approve applying them to a cloned target.</span></label><button class="button primary wide" id="apply-shield-btn" disabled>Approve &amp; apply to clone</button><small>Approval is bound to this run and expires with its signed capsule.</small></aside></div>
+        </section>
+
+        <section class="stage-panel" id="stage-replay" data-panel="replay" aria-labelledby="replay-title" hidden>
+          <div class="panel-head"><div><span class="panel-number">05</span><div><small>EXACT PAIRED REPLAY</small><h3 id="replay-title">Prove the defense</h3></div></div><span class="badge replayed">SAME PAYLOAD BYTES</span></div>
+          <div class="versus">
+            <div class="versus-score before"><span>VULNERABLE</span><strong id="versus-before">—</strong><small>SAFETY SCORE</small></div>
+            <div class="versus-center"><b id="versus-delta">+—</b><span>POINTS</span><i>→</i></div>
+            <div class="versus-score after"><span>HARDENED CLONE</span><strong id="versus-after">—</strong><small>SAFETY SCORE</small></div>
+          </div>
+          <div class="replay-metrics"><div><strong id="fixed-count">—</strong><span>FIXED</span></div><div><strong id="remaining-count">—</strong><span>REMAINING</span></div><div><strong id="regression-count">—</strong><span>REGRESSIONS</span></div><div><strong id="utility-retention">—</strong><span>UTILITY RETAINED</span></div></div>
+          <div class="paired-table-wrap"><table class="paired-table"><thead><tr><th>Test</th><th>Severity</th><th>Baseline</th><th>Hardened</th><th>Pair</th></tr></thead><tbody id="paired-body"></tbody></table></div>
+          <div class="limitations"><div><b>LIMITATIONS</b><span>Single recorded run · synthetic target · no statistical claim · not a certification</span></div><button class="button primary" id="evidence-pack-btn">Download evidence pack</button></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="method" id="methodology">
+      <div class="section-heading"><div><span class="kicker">WHY THE RESULT IS CREDIBLE</span><h2>Models propose. Policy decides.</h2></div><p>Security scores come from observable invariants—not an agent grading its own prose.</p></div>
+      <div class="method-grid">
+        <article><span>01</span><h3>Safe synthetic target</h3><p>No arbitrary URLs, real secrets, or real-world actions. The attack surface is controlled and auditable.</p></article>
+        <article><span>02</span><h3>Deterministic oracle</h3><p>Exact canaries, forbidden actions, approval decisions, deadlines, and hashes are evaluated before an optional judge.</p></article>
+        <article><span>03</span><h3>Fair paired replay</h3><p>The corpus freezes before defense. Payload bytes and model settings remain the same; only the approved policy changes.</p></article>
+        <article><span>04</span><h3>Utility retained</h3><p>Benign controls prevent a shield from “winning” by refusing everything.</p></article>
+      </div>
+    </section>
+
+    <section class="evidence-section" id="evidence">
+      <div><span class="kicker">COMMUNITY TOOLKIT</span><h2>Built for reuse, not trapped in the demo.</h2><p>Versioned AttackCase schemas, TargetAdapter, DeterministicOracle, ActionPolicy, GuardrailPatch, scoring, replay, and report writers are reusable BoxLang components.</p></div>
+      <div class="code-card"><div><span></span><span></span><span></span><b>BoxLang</b></div><pre><code>runner = new EvaluationOrchestrator()
+report = runner.evaluate(
+  target : new AcmeSupportTarget(),
+  corpus : corpus,
+  mode   : "replay"
+)
+
+println( report.getSafetyScore() )</code></pre></div>
+    </section>
+  </main>
+
+  <footer><div class="brand compact"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span class="brand-name">BOX<span>SHIELD</span></span></div><p>Built with BoxLang + BoxLang AI for FIU Challenge 05 · BREAK ME</p><p>Apache-2.0 · Authorized defensive testing only</p></footer>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="web/assets/app.js" defer></script>
+</body>
+</html>

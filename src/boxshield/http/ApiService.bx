@@ -1,0 +1,224 @@
+class {
+    property any validator;
+    property any replayService;
+    property any scorer;
+    property any catalog;
+    property any logger;
+
+    function init() {
+        variables.validator     = new boxshield.security.PayloadValidator();
+        variables.replayService = new boxshield.evaluation.ReplayService();
+        variables.scorer        = new boxshield.evaluation.ScoringService();
+        variables.catalog       = new boxshield.defense.DefenseCatalog();
+        variables.logger        = new boxshield.security.SafeLogger();
+        return this;
+    }
+
+    struct function health() {
+        return envelope({
+            status  : "ok",
+            service : "boxshield-arena",
+            version : application.boxshield.version ?: "1.1.0",
+            mode    : "replay",
+            time    : dateTimeFormat( now(), "iso" )
+        });
+    }
+
+    struct function config() {
+        var providerKeyPresent = len( getSystemSetting( "GEMINI_API_KEY", getSystemSetting( "GOOGLE_API_KEY", "" ) ) ) > 0;
+        return envelope({
+            modes                 : { replay:true, mock:false, live:false },
+            modeReasons           : { mock:"Requires a verified bx-ai runtime.", live:"Requires a verified Gemini-through-bx-ai execution path." },
+            defaultMode           : "replay",
+            targetIds             : [ "acme-support" ],
+            remoteTargets         : false,
+            maximumBodyBytes      : 262144,
+            maximumAiCalls        : val( getSystemSetting( "MAX_AI_CALLS_PER_RUN", "24" ) ),
+            providerKeyPresent    : providerKeyPresent,
+            signingKeyIsEphemeral : application.boxshield.signingKeyIsEphemeral ?: true
+        });
+    }
+
+    struct function targets() {
+        return envelope({ targets:[{
+            id:"acme-support", name:"Acme Support Agent", version:"1.0.0", synthetic:true,
+            description:"Bundled support target with simulated actions only.",
+            capabilities:[ "lookup_order", "issue_demo_refund", "send_demo_message" ],
+            deniedCapabilities:[ "delete_demo_record" ]
+        }] });
+    }
+
+    struct function evaluate( required struct payload ) {
+        var clean = validator.validateEvaluation( arguments.payload );
+        if ( clean.mode == "mock" ) return errorEnvelope( "MOCK_RUNTIME_UNVERIFIED", "Mock mode is disabled until the bx-ai runtime probe passes.", false );
+        if ( clean.mode == "live" ) {
+            var access = new boxshield.security.LiveAccessPolicy().authorize( clean.accessCode, cgi.remote_addr ?: "anonymous" );
+            if ( !access.allowed ) return errorEnvelope( access.code, "Live Gemini execution is unavailable.", false );
+            return errorEnvelope( "LIVE_RUNTIME_UNVERIFIED", "Live mode remains disabled until Gemini-through-bx-ai is verified.", false );
+        }
+
+        var fixture = replayService.loadFixture();
+        var ids = suiteIds( fixture, clean.suite );
+        var selected = replayService.select( fixture, ids.attacks, ids.controls );
+        var baselineScore = scoreSide( selected.results, selected.controls, "baseline" );
+        var nowEpoch = epochNow();
+        var capsulePayload = {
+            schemaVersion      : "1.0.0",
+            stage              : "BASELINE_COMPLETE",
+            runId              : createUUID(),
+            targetId           : fixture.target.id,
+            targetVersion      : fixture.target.version,
+            corpusVersion      : fixture.corpus.version,
+            orderedAttackIds   : ids.attacks,
+            orderedControlIds  : ids.controls,
+            baselineOutcomes   : selected.results.map( function( row ) { return { attackId:row.attackId, payloadHash:row.payloadHash, status:row.baseline.status, responseHash:row.baseline.responseHash }; } ),
+            providerMode       : fixture.sourceMode,
+            modelId            : fixture.modelId,
+            baselineScore      : baselineScore,
+            issuedAtEpoch      : nowEpoch,
+            expiresAtEpoch     : nowEpoch + 900,
+            approvalNonce      : createUUID()
+        };
+        var capsule = signer().sign( capsulePayload );
+        logger.event({ requestId:currentRequestId(), runId:capsulePayload.runId, endpoint:"evaluate", mode:"RECORDED_REPLAY", modelId:fixture.modelId, resultCount:selected.results.len(), status:"OK", aiCallCount:0, simulatedActionCount:sumActions(selected.results,"baseline") });
+        return envelope({
+            mode          : "RECORDED_REPLAY",
+            baseline      : selected.results.map( function( row ) { return { attackId:row.attackId, title:row.title, category:row.category, owasp:row.owasp, severity:row.severity, weight:row.weight, payloadHash:row.payloadHash, result:row.baseline }; } ),
+            controls      : selected.controls,
+            score         : baselineScore,
+            capsule       : capsule,
+            fixtureVersion: fixture.fixtureVersion,
+            sourceMode    : fixture.sourceMode,
+            modelId       : fixture.modelId,
+            disclaimer    : "Authorized synthetic testing only. Not a security certification."
+        });
+    }
+
+    struct function defend( required struct payload ) {
+        var clean = validator.validateDefend( arguments.payload );
+        var runSigner = signer();
+        if ( !runSigner.verify( clean.capsule ) ) return errorEnvelope( "INVALID_CAPSULE", "The run capsule is invalid or expired.", false );
+        var fixture = replayService.loadFixture();
+        if ( !validateKnownRun( clean.capsule.payload, fixture, "BASELINE_COMPLETE" ) ) return errorEnvelope( "RUN_MISMATCH", "The signed run does not match this target or corpus.", false );
+        catalog.validate( fixture.patch );
+
+        var nextPayload = duplicate( clean.capsule.payload );
+        var nowEpoch = epochNow();
+        nextPayload.stage = "PATCH_PROPOSED";
+        nextPayload.patchId = fixture.patch.id;
+        nextPayload.patchHash = runSigner.fingerprint( fixture.patch );
+        nextPayload.approvalNonce = createUUID();
+        nextPayload.issuedAtEpoch = nowEpoch;
+        nextPayload.expiresAtEpoch = nowEpoch + 900;
+        var approvalCapsule = runSigner.sign( nextPayload );
+        logger.event({ requestId:currentRequestId(), runId:nextPayload.runId, endpoint:"defend", mode:"RECORDED_REPLAY", modelId:fixture.modelId, status:"PATCH_PROPOSED", aiCallCount:0, simulatedActionCount:0 });
+        return envelope({ patch:fixture.patch, approvalCapsule:approvalCapsule, approvalNonce:nextPayload.approvalNonce, applied:false, sourceMode:"SCRIPTED_FIXTURE" });
+    }
+
+    struct function replay( required struct payload ) {
+        var clean = validator.validateReplay( arguments.payload );
+        var runSigner = signer();
+        if ( !runSigner.verify( clean.capsule ) ) return errorEnvelope( "INVALID_CAPSULE", "The approval capsule is invalid or expired.", false );
+        var fixture = replayService.loadFixture();
+        if ( !validateKnownRun( clean.capsule.payload, fixture, "PATCH_PROPOSED" ) ) return errorEnvelope( "RUN_MISMATCH", "The approved run does not match this target, corpus, or patch.", false );
+        if ( clean.approvalNonce != clean.capsule.payload.approvalNonce ) return errorEnvelope( "APPROVAL_REQUIRED", "The approval nonce does not match this run.", false );
+        if ( clean.capsule.payload.patchId != fixture.patch.id || clean.capsule.payload.patchHash != runSigner.fingerprint( fixture.patch ) ) return errorEnvelope( "PATCH_MISMATCH", "The approved patch does not match the server catalog.", false );
+        var nonceService = new boxshield.security.ApprovalNonceService();
+        if ( !nonceService.consume( clean.approvalNonce, clean.capsule.payload.runId ) ) return errorEnvelope( "APPROVAL_REPLAYED", "This approval was already consumed on this application instance.", false );
+
+        var selected = replayService.select( fixture, clean.capsule.payload.orderedAttackIds, clean.capsule.payload.orderedControlIds );
+        var report = duplicate( fixture );
+        report.runId = clean.capsule.payload.runId;
+        report.results = selected.results;
+        report.controls = selected.controls;
+        report.patch.status = "APPLIED_TO_CLONE";
+        report.scores = scoreComparison( selected.results, selected.controls );
+        report.approval = { statement:clean.approvalStatement, patchId:fixture.patch.id, appliedTo:"hardened-clone" };
+        logger.event({ requestId:currentRequestId(), runId:report.runId, endpoint:"replay", mode:"RECORDED_REPLAY", modelId:fixture.modelId, resultCount:selected.results.len(), status:"OK", aiCallCount:0, simulatedActionCount:sumActions(selected.results,"hardened") });
+        return envelope({ report:report, appliedTo:"hardened-clone", productionActionsExecuted:false });
+    }
+
+    struct function report() {
+        var fixture = replayService.loadFixture();
+        fixture.scores = scoreComparison( fixture.results, fixture.controls );
+        return envelope({ report:fixture });
+    }
+
+    private struct function suiteIds( required struct fixture, required string suite ) {
+        if ( arguments.suite == "full" ) return {
+            attacks:fixture.results.map( function( row ) { return row.attackId; } ),
+            controls:fixture.controls.map( function( row ) { return row.controlId; } )
+        };
+        return {
+            attacks:[ "ATK-001", "ATK-003", "ATK-004", "ATK-006", "ATK-007", "ATK-008", "ATK-A01" ],
+            controls:[ "CTRL-001" ]
+        };
+    }
+
+    private boolean function validateKnownRun( required struct run, required struct fixture, required string expectedStage ) {
+        if ( run.stage != arguments.expectedStage || run.targetId != fixture.target.id || run.targetVersion != fixture.target.version || run.corpusVersion != fixture.corpus.version || run.providerMode != fixture.sourceMode || run.modelId != fixture.modelId ) return false;
+        try {
+            var selected = replayService.select( fixture, run.orderedAttackIds, run.orderedControlIds );
+            if ( !isArray( run.baselineOutcomes ?: "" ) || run.baselineOutcomes.len() != selected.results.len() ) return false;
+            run.baselineOutcomes.each( function( outcome, index ) {
+                var expected = selected.results[ index ];
+                if ( outcome.attackId != expected.attackId || outcome.payloadHash != expected.payloadHash || outcome.status != expected.baseline.status || outcome.responseHash != expected.baseline.responseHash ) throw( type="BoxShield.RunMismatch", message="Frozen baseline outcome mismatch" );
+            } );
+            return true;
+        } catch ( any ignored ) {
+            return false;
+        }
+    }
+
+    private struct function scoreSide( required array results, required array controls, required string side ) {
+        var attackResults = results.map( function( row ) { return { attackId:row.attackId, status:row[ side ].status, weight:row.weight, payloadHash:row.payloadHash }; } );
+        var controlResults = controls.map( function( row ) { return { controlId:row.controlId, passed:row[ side & "Passed" ] }; } );
+        return scorer.score( attackResults, controlResults );
+    }
+
+    private struct function scoreComparison( required array results, required array controls ) {
+        var baseline = { attackResults:[], controlResults:[], score:{} };
+        var hardened = { attackResults:[], controlResults:[], score:{} };
+        results.each( function( row ) {
+            baseline.attackResults.append({ attackId:row.attackId, status:row.baseline.status, weight:row.weight, payloadHash:row.payloadHash });
+            hardened.attackResults.append({ attackId:row.attackId, status:row.hardened.status, weight:row.weight, payloadHash:row.payloadHash });
+        } );
+        controls.each( function( row ) {
+            baseline.controlResults.append({ controlId:row.controlId, passed:row.baselinePassed });
+            hardened.controlResults.append({ controlId:row.controlId, passed:row.hardenedPassed });
+        } );
+        baseline.score = scorer.score( baseline.attackResults, baseline.controlResults );
+        hardened.score = scorer.score( hardened.attackResults, hardened.controlResults );
+        return scorer.compare( baseline, hardened );
+    }
+
+    private numeric function sumActions( required array results, required string side ) {
+        var total = 0;
+        results.each( function( row ) { total += row[ side ].simulatedActionCount ?: 0; } );
+        return total;
+    }
+
+    private any function signer() {
+        return new boxshield.security.RunCapsuleSigner( application.boxshield.signingKey );
+    }
+
+    private numeric function epochNow() {
+        return dateDiff( "s", createDateTime( 1970,1,1,0,0,0 ), now() );
+    }
+
+    private string function currentRequestId() {
+        try {
+            if ( len( request.boxshieldRequestId ?: "" ) ) return request.boxshieldRequestId;
+        } catch ( any ignored ) {}
+        return createUUID();
+    }
+
+    private struct function envelope( required any data ) {
+        return { ok:true, requestId:currentRequestId(), data:arguments.data, error:null, meta:{schemaVersion:"1.0.0"} };
+    }
+
+    private struct function errorEnvelope( required string code, required string message, boolean retryable=false ) {
+        logger.event({ requestId:currentRequestId(), endpoint:"api", status:"ERROR", errorCode:arguments.code }, "warning" );
+        return { ok:false, requestId:currentRequestId(), data:null, error:{code:arguments.code,message:arguments.message,retryable:arguments.retryable}, meta:{schemaVersion:"1.0.0"} };
+    }
+}

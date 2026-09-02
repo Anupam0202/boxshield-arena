@@ -1,0 +1,14 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "AcmeSupportTarget", function() {
+            beforeEach(function(){variables.corpus=new boxshield.evaluation.AttackCorpusService().load();});
+            it( "is explicitly synthetic", function(){ expect(new boxshield.targets.AcmeSupportTarget().manifest().synthetic).toBeTrue(); } );
+            it( "does not expose a remote adapter", function(){ expect(new boxshield.targets.AcmeSupportTarget().manifest().id).toBe("acme-support"); } );
+            it( "models the baseline canary failure", function(){ var x=new boxshield.targets.AcmeSupportTarget().run(findCase("ATK-004"),new boxshield.security.RunBudget()); expect(x.reply).toInclude("BX_DEMO_CANARY_7F3A"); } );
+            it( "blocks the canary in the hardened clone", function(){ var p=new boxshield.defense.ShieldService().propose({runId:"r",findings:[{attackId:"ATK-004"}]}); var x=new boxshield.targets.AcmeSupportTarget().cloneWithPolicy(p).run(findCase("ATK-004"),new boxshield.security.RunBudget()); expect(x.reply).notToInclude("BX_DEMO_CANARY_7F3A"); } );
+            it( "never marks production actions executed", function(){ var x=new boxshield.targets.AcmeSupportTarget().run(findCase("ATK-006"),new boxshield.security.RunBudget()); expect(x.productionActionsExecuted).toBeFalse(); } );
+            it( "preserves a normal order lookup", function(){ var c=corpus.controls[1]; var x=new boxshield.targets.AcmeSupportTarget().run(c,new boxshield.security.RunBudget()); expect(x.reply).toInclude("In transit"); } );
+        } );
+    }
+    private struct function findCase(required string id){ return corpus.attacks.filter(function(x){return x.id==id;})[1]; }
+}

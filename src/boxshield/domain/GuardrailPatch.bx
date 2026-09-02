@@ -1,0 +1,18 @@
+class accessors="true" {
+    property name="id" type="string";
+    property name="version" type="string";
+    property name="summary" type="string";
+    property name="operations" type="array";
+
+    function init( required struct data ) {
+        variables.id         = data.id ?: createUUID();
+        variables.version    = data.version ?: "1.0.0";
+        variables.summary    = data.summary ?: "";
+        variables.operations = data.operations ?: [];
+        return this;
+    }
+
+    struct function toStruct() {
+        return { id:variables.id, version:variables.version, summary:variables.summary, operations:duplicate( variables.operations ) };
+    }
+}

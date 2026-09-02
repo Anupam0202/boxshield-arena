@@ -1,0 +1,1 @@
+class { string function write( required struct report ){ return jsonSerialize(report); } }

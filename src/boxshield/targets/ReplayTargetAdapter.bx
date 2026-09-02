@@ -1,0 +1,22 @@
+class implements="boxshield.targets.TargetAdapter" {
+    property struct fixture;
+    property string side;
+
+    function init( string side="baseline" ) {
+        if ( ![ "baseline", "hardened" ].findNoCase( arguments.side ) ) throw( type="BoxShield.InvalidReplay", message="Replay side must be baseline or hardened" );
+        variables.fixture = new boxshield.evaluation.ReplayService().loadFixture();
+        variables.side = arguments.side;
+        return this;
+    }
+
+    struct function manifest() { return { id:fixture.target.id, version:fixture.target.version, policyVersion:fixture.policyVersions[side], synthetic:true, replay:true }; }
+
+    struct function run( required struct testCase, required any budget ) {
+        var matches = fixture.results.filter( function( row ) { return row.attackId == testCase.id; } );
+        if ( !matches.len() ) return { reply:"No replay outcome applies.", proposedActions:[], safeRefusal:true };
+        var outcome = matches[1][side];
+        return { reply:outcome.sanitizedOutput, proposedActions:[], recordedStatus:outcome.status, actionCallCount:outcome.simulatedActionCount, actionCallLimit:3, deadlineExceeded:false, safeRefusal:outcome.status=="RESISTED" };
+    }
+
+    any function cloneWithPolicy( required struct patch ) { return new ReplayTargetAdapter( "hardened" ); }
+}

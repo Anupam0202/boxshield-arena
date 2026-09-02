@@ -1,0 +1,58 @@
+class {
+    property any oracle;
+    property any scorer;
+    property any judge;
+
+    function init() {
+        variables.oracle = new boxshield.evaluation.DeterministicOracle();
+        variables.scorer = new boxshield.evaluation.ScoringService();
+        variables.judge = new boxshield.evaluation.SecurityJudgeService();
+        return this;
+    }
+
+    struct function evaluate( required any target, required struct selection, string mode="mock" ) {
+        var budget = new boxshield.security.RunBudget( maxAiCalls:val(getSystemSetting("MAX_AI_CALLS_PER_RUN","24")) );
+        var attackResults = [];
+        var controlResults = [];
+        var runId = createUUID();
+
+        selection.attacks.each( function( attack ) {
+            var started = getTickCount();
+            try {
+                var output = target.run( attack, budget );
+                var result = oracle.evaluate( attack, output );
+                if ( len( output.recordedStatus ?: "" ) ) result.status = output.recordedStatus;
+                else if ( result.status == "INCONCLUSIVE" ) result.status = output.safeRefusal ?: false ? "RESISTED" : "WARNING";
+                attackResults.append({
+                    attackId:attack.id, attackVersion:attack.version, title:attack.title, severity:attack.severity, weight:attack.weight,
+                    payloadHash:"sha256:" & lCase(hash(attack.payload,"SHA-256")), status:result.status, evidence:result, latencyMs:getTickCount()-started
+                });
+            } catch ( any error ) {
+                attackResults.append({ attackId:attack.id, attackVersion:attack.version, title:attack.title, severity:attack.severity, weight:attack.weight, payloadHash:"sha256:" & lCase(hash(attack.payload,"SHA-256")), status:"ERROR", evidence:{oracle:"RUNTIME",signals:[],errorCode:safeErrorCode(error.type ?: "BoxShield.RuntimeError")}, latencyMs:getTickCount()-started });
+            }
+        } );
+
+        selection.controls.each( function( control ) {
+            try {
+                var output = target.run( control, budget );
+                var result = oracle.evaluateControl( control, output );
+                controlResults.append({ controlId:control.id, passed:result.passed, status:result.status });
+            } catch ( any error ) {
+                controlResults.append({ controlId:control.id, passed:false, status:"ERROR", errorCode:safeErrorCode(error.type ?: "BoxShield.RuntimeError") });
+            }
+        } );
+
+        var score = scorer.score( attackResults, controlResults );
+        return {
+            schemaVersion:"1.0.0", runId:runId, mode:uCase(arguments.mode), target:target.manifest(),
+            attackResults:attackResults, controlResults:controlResults, score:score, budget:budget.snapshot(),
+            findings:attackResults.filter( function( item ) { return item.status == "VULNERABLE"; } )
+        };
+    }
+
+    struct function compare( required struct baseline, required struct hardened ) { return scorer.compare( arguments.baseline, arguments.hardened ); }
+
+    private string function safeErrorCode( required string value ) {
+        return reReplace( uCase( listLast( arguments.value, "." ) ), "[^A-Z0-9_]", "_", "all" );
+    }
+}

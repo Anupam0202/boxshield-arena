@@ -1,0 +1,64 @@
+class {
+    property struct catalog default={
+        enableInputSanitizer       : { type:"boolean", utilityRisk:"May flag unusual phrasing" },
+        setSanitizerAction         : { type:"enum", values:["block","strip","flag","log"], utilityRisk:"Blocking can reduce recall" },
+        enableContextFencing       : { type:"boolean", utilityRisk:"Low" },
+        enforceActionAllowlist     : { type:"actionArray", utilityRisk:"New actions require registration" },
+        requireApprovalForActions  : { type:"actionArray", utilityRisk:"Adds a confirmation step" },
+        denyActions                : { type:"actionArray", utilityRisk:"Denied actions are unavailable" },
+        setMaximumActionCalls      : { type:"numeric", min:1, max:8, utilityRisk:"Long workflows may stop early" },
+        setMaximumRunDuration      : { type:"numeric", min:1000, max:120000, utilityRisk:"Slow workflows may time out" },
+        enableOutputGuard          : { type:"boolean", utilityRisk:"Pattern false positives" },
+        addSyntheticCanaryRedactor : { type:"markerArray", utilityRisk:"Exact markers are redacted" },
+        stripExternalMarkdownImages:{ type:"boolean", utilityRisk:"Remote images are removed" },
+        enableSemanticInputJudge   : { type:"boolean", utilityRisk:"Adds latency and can misclassify" },
+        enableSemanticOutputJudge  : { type:"boolean", utilityRisk:"Adds latency and can misclassify" }
+    };
+    property array actionNames default=[ "lookup_order", "issue_demo_refund", "send_demo_message", "delete_demo_record" ];
+    property array syntheticMarkers default=[ "BX_DEMO_CANARY_7F3A", "BX_INTERNAL_CONTEXT_MARKER_42" ];
+
+    struct function all() { return duplicate( catalog ); }
+
+    void function validate( required struct patch ) {
+        if ( !isArray( patch.operations ?: "" ) || patch.operations.len() > 16 ) throw( type="BoxShield.InvalidPatch", message="Operations must be a bounded array" );
+        patch.operations.each( function( operation ) {
+            if ( !isStruct( operation ) ) throw( type="BoxShield.InvalidPatch", message="Every operation must be an object" );
+            operation.keyArray().each( function( key ) {
+                if ( ![ "name", "value", "reason", "utilityRisk" ].findNoCase( key ) ) throw( type="BoxShield.InvalidPatch", message="Unknown patch field" );
+            } );
+            var name = operation.name ?: "";
+            if ( !structKeyExists( catalog, name ) || !structKeyExists( operation, "value" ) ) throw( type="BoxShield.InvalidPatch", message="Unknown or incomplete defense operation" );
+            if ( len( operation.reason ?: "" ) > 1000 || len( operation.utilityRisk ?: "" ) > 500 ) throw( type="BoxShield.InvalidPatch", message="Patch metadata exceeds bounds" );
+            validateValue( name, operation.value, catalog[ name ] );
+        } );
+    }
+
+    private void function validateValue( required string name, required any value, required struct rule ) {
+        switch ( rule.type ) {
+            case "boolean":
+                if ( !isBoolean( value ) ) throw( type="BoxShield.InvalidPatch", message="Boolean patch value required" );
+                break;
+            case "enum":
+                if ( !isSimpleValue( value ) || !rule.values.findNoCase( value ) ) throw( type="BoxShield.InvalidPatch", message="Unsupported enum value" );
+                break;
+            case "numeric":
+                if ( !isNumeric( value ) || value < rule.min || value > rule.max ) throw( type="BoxShield.InvalidPatch", message="Numeric patch value is out of range" );
+                break;
+            case "actionArray":
+                validateBoundedStringArray( value, actionNames );
+                break;
+            case "markerArray":
+                validateBoundedStringArray( value, syntheticMarkers );
+                break;
+            default:
+                throw( type="BoxShield.InvalidPatch", message="Unsupported catalog type" );
+        }
+    }
+
+    private void function validateBoundedStringArray( required any value, required array allowlist ) {
+        if ( !isArray( value ) || !value.len() || value.len() > 8 ) throw( type="BoxShield.InvalidPatch", message="A bounded nonempty array is required" );
+        value.each( function( item ) {
+            if ( !isSimpleValue( item ) || len( item ) > 128 || !allowlist.findNoCase( item ) ) throw( type="BoxShield.InvalidPatch", message="Array value is not allowlisted" );
+        } );
+    }
+}

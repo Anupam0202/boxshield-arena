@@ -1,0 +1,21 @@
+class accessors="true" {
+    property name="schemaVersion" type="string" default="1.0.0";
+    property name="runId" type="string";
+    property name="mode" type="string";
+    property name="attackResults" type="array";
+    property name="controlResults" type="array";
+    property name="score" type="struct";
+    property name="findings" type="array";
+
+    function init( required struct data ) {
+        variables.runId = data.runId;
+        variables.mode = data.mode;
+        variables.attackResults = duplicate( data.attackResults ?: [] );
+        variables.controlResults = duplicate( data.controlResults ?: [] );
+        variables.score = duplicate( data.score ?: {} );
+        variables.findings = duplicate( data.findings ?: [] );
+        return this;
+    }
+
+    struct function toStruct() { return { schemaVersion:variables.schemaVersion, runId:variables.runId, mode:variables.mode, attackResults:duplicate(variables.attackResults), controlResults:duplicate(variables.controlResults), score:duplicate(variables.score), findings:duplicate(variables.findings) }; }
+}

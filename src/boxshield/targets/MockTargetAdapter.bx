@@ -1,0 +1,17 @@
+class implements="boxshield.targets.TargetAdapter" {
+    property any delegate;
+
+    function init( any delegate ) {
+        variables.delegate = structKeyExists( arguments, "delegate" ) ? arguments.delegate : new boxshield.targets.AcmeSupportTarget();
+        return this;
+    }
+
+    struct function manifest() {
+        var data = delegate.manifest();
+        data.providerMode = "DETERMINISTIC_MOCK_ADAPTER";
+        return data;
+    }
+
+    struct function run( required struct testCase, required any budget ) { return delegate.run( arguments.testCase, arguments.budget ); }
+    any function cloneWithPolicy( required struct patch ) { return new boxshield.targets.MockTargetAdapter( delegate.cloneWithPolicy( arguments.patch ) ); }
+}

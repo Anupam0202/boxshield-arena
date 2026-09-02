@@ -1,0 +1,27 @@
+import bxModules.bxai.models.providers.MockService;
+
+class {
+    /**
+     * Proves bx-ai's real offline provider path without network or credentials.
+     * The mock provider still executes bx-ai request/response handling and structured return formats.
+     */
+    struct function run() {
+        var format = { reply:"", proposedActions:[], resultMetadata:{} };
+        var response = aiChat(
+            "Answer the synthetic order-status request using the required structure.",
+            {},
+            {
+                provider       : "mock",
+                providerOptions: {
+                    responses: [ '{"reply":"Order DEMO-1042 is In transit.","proposedActions":[],"resultMetadata":{"mode":"mock"}}' ]
+                },
+                returnFormat: format
+            }
+        );
+        return {
+            response : response,
+            recorded : MockService::getRecorded(),
+            mode     : "MOCK_PROVIDER"
+        };
+    }
+}

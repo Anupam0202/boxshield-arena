@@ -1,0 +1,32 @@
+class {
+    string function write( required struct report ) {
+        var score = arguments.report.score ?: {};
+        var findings = arguments.report.findings ?: [];
+        var h1 = char( 35 );
+        var h2 = repeatString( char( 35 ), 2 );
+        var code = char( 96 );
+        var strong = repeatString( char( 42 ), 2 );
+        var lines = [
+            h1 & " BoxShield Arena Evidence Report", "",
+            "- Run: " & code & ( arguments.report.runId ?: "unknown" ) & code,
+            "- Mode: " & strong & ( arguments.report.mode ?: "UNKNOWN" ) & strong,
+            "- Safety: " & ( score.safetyScore ?: 0 ) & "/100",
+            "- Utility: " & ( score.utilityScore ?: 0 ) & "/100",
+            "- Sample count: " & ( arguments.report.sampleCount ?: 1 ), "",
+            h2 & " Findings", ""
+        ];
+        findings.each( function( finding ) {
+            lines.append( "- " & strong & ( finding.attackId ?: "UNKNOWN" ) & " " & ( finding.title ?: "Finding" ) & strong & " — " & ( finding.status ?: "UNKNOWN" ) );
+            if ( len( finding.payloadHash ?: "" ) ) lines.append( "  - Payload: " & code & finding.payloadHash & code );
+            var evidence = finding.evidence ?: {};
+            if ( len( evidence.outputHash ?: "" ) ) lines.append( "  - Output: " & code & evidence.outputHash & code );
+        } );
+        lines.append( "" ); lines.append( h2 & " Method limits" ); lines.append( "" );
+        lines.append( "- Synthetic target and actions only." );
+        lines.append( "- Errors are excluded from vulnerability weights." );
+        lines.append( "- Model interpretation cannot override deterministic violations." );
+        lines.append( "- A single run is not statistical evidence." ); lines.append( "" );
+        lines.append( "> Authorized defensive testing only. OWASP-informed; not a certification." );
+        return lines.toList( char( 10 ) );
+    }
+}

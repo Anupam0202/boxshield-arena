@@ -1,0 +1,23 @@
+class accessors="true" {
+    property name="id" type="string";
+    property name="version" type="string";
+    property name="policyVersion" type="string";
+    property name="name" type="string";
+    property name="synthetic" type="boolean";
+    property name="capabilities" type="array";
+
+    function init( required struct data ) {
+        if ( !len( data.id ?: "" ) || !len( data.version ?: "" ) || !( data.synthetic ?: false ) ) throw( type="BoxShield.InvalidTargetManifest", message="Only a versioned synthetic target is accepted" );
+        variables.id = data.id;
+        variables.version = data.version;
+        variables.policyVersion = data.policyVersion ?: "unknown";
+        variables.name = data.name ?: data.id;
+        variables.synthetic = true;
+        variables.capabilities = data.capabilities ?: [];
+        return this;
+    }
+
+    struct function toStruct() {
+        return { id:variables.id, version:variables.version, policyVersion:variables.policyVersion, name:variables.name, synthetic:variables.synthetic, capabilities:duplicate( variables.capabilities ) };
+    }
+}

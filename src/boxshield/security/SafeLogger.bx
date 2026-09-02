@@ -1,0 +1,11 @@
+class {
+    property array allowedFields default=[ "requestId", "runId", "endpoint", "mode", "modelId", "durationMs", "resultCount", "status", "aiCallCount", "simulatedActionCount", "errorCode" ];
+
+    void function event( required struct fields, string level="information" ) {
+        var safe = {};
+        fields.each( function( key, value ) {
+            if ( allowedFields.findNoCase( key ) && isSimpleValue( value ) ) safe[ key ] = left( toString( value ), 256 );
+        } );
+        writeLog( text=jsonSerialize( safe ), type=arguments.level, file="boxshield" );
+    }
+}

@@ -1,0 +1,10 @@
+class {
+    this.name = "BoxShieldArenaTests";
+    this.applicationTimeout = createTimeSpan( 0, 1, 0, 0 );
+    this.mappings = { "/boxshield" : expandPath( "../src/boxshield" ) };
+
+    boolean function onApplicationStart() {
+        application.boxshield = { version:"1.1.0", mode:"replay", signingKey:repeatString("a",64), signingKeyIsEphemeral:false, consumedApprovalNonces:{}, liveRate:{} };
+        return true;
+    }
+}

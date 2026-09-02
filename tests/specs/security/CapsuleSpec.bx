@@ -1,0 +1,40 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "RunCapsuleSigner", function() {
+            it( "signs and verifies canonical state", function() {
+                var signer=new boxshield.security.RunCapsuleSigner(repeatString("k",64));
+                expect( signer.verify(signer.sign(validPayload())) ).toBeTrue();
+            } );
+            it( "rejects payload tampering", function() {
+                var signer=new boxshield.security.RunCapsuleSigner(repeatString("k",64));
+                var capsule=signer.sign(validPayload()); capsule.payload.targetId="changed";
+                expect( signer.verify(capsule) ).toBeFalse();
+            } );
+            it( "rejects signature tampering", function() {
+                var signer=new boxshield.security.RunCapsuleSigner(repeatString("k",64));
+                var capsule=signer.sign(validPayload()); capsule.signature="invalid";
+                expect( signer.verify(capsule) ).toBeFalse();
+            } );
+            it( "rejects expired claims", function() {
+                var payload=validPayload(); payload.expiresAtEpoch=payload.issuedAtEpoch-1;
+                expect( function(){ new boxshield.security.RunCapsuleSigner(repeatString("k",64)).sign(payload); } ).toThrow();
+            } );
+            it( "rejects future-issued claims", function() {
+                var payload=validPayload(); payload.issuedAtEpoch+=120; payload.expiresAtEpoch=payload.issuedAtEpoch+100;
+                expect( function(){ new boxshield.security.RunCapsuleSigner(repeatString("k",64)).sign(payload); } ).toThrow();
+            } );
+            it( "requires a strong signing key", function() {
+                expect( function(){ new boxshield.security.RunCapsuleSigner("short"); } ).toThrow();
+            } );
+            it( "fingerprints equivalent ordered structures identically", function() {
+                var signer=new boxshield.security.RunCapsuleSigner(repeatString("k",64));
+                expect( signer.fingerprint({b:2,a:1}) ).toBe( signer.fingerprint({a:1,b:2}) );
+            } );
+        } );
+    }
+
+    private struct function validPayload() {
+        var issued=dateDiff("s",createDateTime(1970,1,1,0,0,0),now());
+        return {schemaVersion:"1.0.0",stage:"BASELINE_COMPLETE",runId:createUUID(),targetId:"acme-support",targetVersion:"1.0.0",corpusVersion:"1.0.0",orderedAttackIds:["ATK-001"],orderedControlIds:["CTRL-001"],issuedAtEpoch:issued,expiresAtEpoch:issued+900,approvalNonce:createUUID()};
+    }
+}

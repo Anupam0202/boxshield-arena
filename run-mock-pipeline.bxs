@@ -1,0 +1,2 @@
+probe = new boxshield.agents.MockPipelineProbe().run();
+println( jsonSerialize( { mode:probe.mode, reply:probe.response.reply, recorded:probe.recorded.len() } ) );

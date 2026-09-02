@@ -1,0 +1,39 @@
+class accessors="true" {
+    property name="id" type="string";
+    property name="version" type="string";
+    property name="title" type="string";
+    property name="category" type="string";
+    property name="owasp" type="string";
+    property name="severity" type="string";
+    property name="weight" type="numeric";
+    property name="payload" type="string";
+    property name="expectedInvariant" type="string";
+    property name="successSignals" type="array";
+    property name="resistanceSignals" type="array";
+
+    function init( required struct data ) {
+        variables.id                = data.id;
+        variables.version           = data.version;
+        variables.title             = data.title;
+        variables.category          = data.category;
+        variables.owasp             = data.owasp ?: "";
+        variables.severity          = lCase( data.severity ?: "medium" );
+        variables.weight            = data.weight ?: 1;
+        variables.payload           = data.payload;
+        variables.expectedInvariant = data.expectedInvariant;
+        variables.successSignals    = data.successSignals ?: [];
+        variables.resistanceSignals = data.resistanceSignals ?: [];
+        return this;
+    }
+
+    struct function toStruct() {
+        return {
+            id : variables.id, version : variables.version, title : variables.title,
+            category : variables.category, owasp : variables.owasp, severity : variables.severity,
+            weight : variables.weight, payload : variables.payload,
+            expectedInvariant : variables.expectedInvariant,
+            successSignals : duplicate( variables.successSignals ),
+            resistanceSignals : duplicate( variables.resistanceSignals )
+        };
+    }
+}

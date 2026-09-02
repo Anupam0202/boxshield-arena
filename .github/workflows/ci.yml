@@ -1,0 +1,58 @@
+name: ci
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Install BoxLang and dependencies
+        run: |
+          curl -fsSL https://install.boxlang.io | bash -s -- --with-commandbox --without-jre
+          hash -r
+          box install
+          install-bx-module bx-ai@3.4.0 --local
+      - name: Static, TestBox, and bx-ai gates
+        env: { REQUIRE_BOXLANG: '1' }
+        run: ./scripts/test.sh
+      - name: Secret and release archive gates
+        run: ./scripts/secret-scan.sh && ./scripts/package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boxshield-arena-source
+          path: dist/boxshield-arena.zip*
+          if-no-files-found: error
+  container:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: |
+          docker build --pull -f Dockerfile -t boxshield-arena:ci .
+          docker build --pull -f Dockerfile.vercel -t boxshield-arena:vercel-ci .
+      - name: Smoke local image
+        run: |
+          KEY="$(python3 -c 'import secrets;print(secrets.token_hex(32))')"
+          docker run -d --name boxshield -p 8080:8080 -e PORT=8080 -e AI_MODE=replay -e LIVE_MODE_ENABLED=false -e RUN_STATE_SIGNING_KEY="$KEY" boxshield-arena:ci
+          trap 'docker logs boxshield || true; docker rm -f boxshield || true' EXIT
+          for i in $(seq 1 90); do curl -fsS http://127.0.0.1:8080/api/health.bxm >/dev/null && break; sleep 1; done
+          ./scripts/http-runtime-gate.sh http://127.0.0.1:8080
+          docker stop --time 30 boxshield
+      - name: Smoke Vercel image contract
+        run: |
+          KEY="$(python3 -c 'import secrets;print(secrets.token_hex(32))')"
+          docker run -d --name boxshield-vercel -p 8081:80 -e PORT=80 -e AI_MODE=replay -e LIVE_MODE_ENABLED=false -e RUN_STATE_SIGNING_KEY="$KEY" boxshield-arena:vercel-ci
+          trap 'docker logs boxshield-vercel || true; docker rm -f boxshield-vercel || true' EXIT
+          for i in $(seq 1 90); do curl -fsS http://127.0.0.1:8081/api/health.bxm >/dev/null && break; sleep 1; done
+          ./scripts/smoke.sh http://127.0.0.1:8081
+          docker stop --time 30 boxshield-vercel

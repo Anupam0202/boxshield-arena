@@ -1,0 +1,14 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "DefenseCatalog", function() {
+            it( "accepts catalog operations", function() {
+                var catalog = new boxshield.defense.DefenseCatalog();
+                expect( function(){ catalog.validate({operations:[{name:"enableContextFencing",value:true}]}); } ).notToThrow();
+            } );
+            it( "rejects executable and unknown operations", function() {
+                var catalog = new boxshield.defense.DefenseCatalog();
+                expect( function(){ catalog.validate({operations:[{name:"runCommand",command:"whoami"}]}); } ).toThrow();
+            } );
+        } );
+    }
+}

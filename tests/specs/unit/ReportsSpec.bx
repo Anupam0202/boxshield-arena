@@ -1,0 +1,9 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "Report writers", function() {
+            it( "produces valid JSON", function(){ var text=new boxshield.reports.JsonReportWriter().write({runId:"r",mode:"REPLAY",score:{safetyScore:100},findings:[]}); expect(isJSON(text)).toBeTrue(); } );
+            it( "produces an evidence-bound Markdown report", function(){ var report={runId:"r",mode:"REPLAY",score:{safetyScore:89,utilityScore:80},findings:[{attackId:"ATK-001",title:"Injection",status:"VULNERABLE"}]}; var text=new boxshield.reports.MarkdownReportWriter().write(report); expect(text).toInclude("ATK-001"); expect(text).toInclude("not a certification"); } );
+            it( "does not serialize provider secrets supplied outside the report", function(){ var text=new boxshield.reports.JsonReportWriter().write({runId:"r",findings:[]}); expect(text).notToInclude("GEMINI_API_KEY"); } );
+        } );
+    }
+}

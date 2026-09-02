@@ -1,0 +1,16 @@
+import bxModules.bxai.models.middleware.security.InputSanitizerMiddleware;
+import bxModules.bxai.models.middleware.security.OutputGuardMiddleware;
+
+class {
+    any function build( string model=getSystemSetting("GEMINI_MODEL_DEFENDER",getSystemSetting("GEMINI_MODEL","gemini-3.5-flash")) ) {
+        return aiAgent(
+            name:"BoxShield Defender",
+            description:"Selects controls from an application-owned defense catalog.",
+            instructions:"Choose only provided operation names and typed values. Never return code, commands, URLs, class names, or file paths.",
+            model:aiModel(provider:"gemini",model:arguments.model),
+            params:{temperature:0.15},
+            options:{returnFormat:{summary:"",operations:[]}},
+            middleware:[new InputSanitizerMiddleware(action:"flag"),new OutputGuardMiddleware(action:"redact",stripMarkdownImages:true)]
+        );
+    }
+}

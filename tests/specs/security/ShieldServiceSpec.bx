@@ -1,0 +1,11 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "ShieldService", function() {
+            it( "proposes only catalog operations", function(){ var p=new boxshield.defense.ShieldService().propose({runId:"run-1",findings:[{attackId:"ATK-001"}]}); expect(function(){new boxshield.defense.DefenseCatalog().validate(p);}).notToThrow(); } );
+            it( "rejects unknown executable patch content", function(){ expect(function(){new boxshield.defense.DefenseCatalog().validate({operations:[{name:"runCode",value:"x",command:"x"}]});}).toThrow(); } );
+            it( "rejects wrong value types", function(){ expect(function(){new boxshield.defense.DefenseCatalog().validate({operations:[{name:"setMaximumActionCalls",value:"many"}]});}).toThrow(); } );
+            it( "requires clone-only approval", function(){ var target=new boxshield.targets.AcmeSupportTarget(); var patch=new boxshield.defense.ShieldService().propose({runId:"run-1",findings:[{attackId:"ATK-001"}]}); expect(function(){new boxshield.defense.ShieldService().applyToClone(target,patch,{valid:false});}).toThrow(); } );
+            it( "applies a valid patch to a cloned target", function(){ var target=new boxshield.targets.AcmeSupportTarget(); var patch=new boxshield.defense.ShieldService().propose({runId:"run-1",findings:[{attackId:"ATK-001"}]}); var clone=new boxshield.defense.ShieldService().applyToClone(target,patch,{valid:true,statement:"APPROVE_CLONE_ONLY"}); expect(clone.manifest().policyVersion).toBe("shield-1.0.0"); expect(target.manifest().policyVersion).toBe("vulnerable-1.0.0"); } );
+        } );
+    }
+}

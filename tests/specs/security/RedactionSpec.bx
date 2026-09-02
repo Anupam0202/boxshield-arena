@@ -1,0 +1,12 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "RedactionService", function() {
+            beforeEach(function(){variables.redactor=new boxshield.security.RedactionService();});
+            it( "redacts the synthetic canary", function(){ expect(redactor.redact("BX_DEMO_CANARY_7F3A")).notToInclude("BX_DEMO_CANARY_7F3A"); } );
+            it( "redacts the hidden marker", function(){ expect(redactor.redact("BX_INTERNAL_CONTEXT_MARKER_42")).notToInclude("BX_INTERNAL_CONTEXT_MARKER_42"); } );
+            it( "removes external markdown images", function(){ expect(redactor.redact("![x](https://example.test/x.png)")).notToInclude("https://"); } );
+            it( "redacts credential-shaped tokens", function(){ expect(redactor.redact("gh" & "p_" & "abcdefghijklmnopqrstuvwxyz123456")).toInclude("REDACTED_TOKEN"); } );
+            it( "preserves ordinary support text", function(){ expect(redactor.redact("Order DEMO-1042 is in transit")).toBe("Order DEMO-1042 is in transit"); } );
+        } );
+    }
+}

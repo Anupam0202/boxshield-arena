@@ -1,0 +1,32 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "AttackCorpusService", function() {
+            it( "loads a versioned corpus", function() {
+                var corpus = new boxshield.evaluation.AttackCorpusService().load();
+                expect( corpus.schemaVersion ).toBe( "1.0.0" );
+                expect( corpus.attacks.len() ).toBe( 9 );
+                expect( corpus.controls.len() ).toBe( 5 );
+            } );
+            it( "uses unique stable attack IDs", function() {
+                var corpus = new boxshield.evaluation.AttackCorpusService().load();
+                var ids = corpus.attacks.map( function(x){ return x.id; } );
+                expect( ids.len() ).toBe( ids.toSet().len() );
+            } );
+            it( "includes required evidence metadata", function() {
+                var corpus = new boxshield.evaluation.AttackCorpusService().load();
+                corpus.attacks.each( function(x){
+                    expect( x.successSignals.len() ).toBeGTE( 1 );
+                    expect( x.resistanceSignals.len() ).toBeGTE( 1 );
+                    expect( x.applicableDefense.len() ).toBeGTE( 1 );
+                    expect( x.safeExecution ).notToBeEmpty();
+                } );
+            } );
+            it( "selects bounded Quick and complete Full suites", function() {
+                var service = new boxshield.evaluation.AttackCorpusService();
+                var corpus = service.load();
+                expect( service.select(corpus,"quick").attacks.len() ).toBeLTE( 8 );
+                expect( service.select(corpus,"full").attacks.len() ).toBe( 9 );
+            } );
+        } );
+    }
+}

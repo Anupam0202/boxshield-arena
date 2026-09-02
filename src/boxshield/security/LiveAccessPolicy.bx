@@ -1,0 +1,31 @@
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
+class {
+    property numeric defaultLimit default=2;
+
+    struct function authorize( required string accessCode, string clientKey="anonymous" ) {
+        if ( lCase( getSystemSetting( "LIVE_MODE_ENABLED", "false" ) ) != "true" ) return { allowed:false, code:"LIVE_MODE_DISABLED" };
+        if ( !len( getSystemSetting( "GEMINI_API_KEY", getSystemSetting( "GOOGLE_API_KEY", "" ) ) ) ) return { allowed:false, code:"LIVE_PROVIDER_UNCONFIGURED" };
+        var expected = lCase( getSystemSetting( "LIVE_DEMO_TOKEN_HASH", "" ) );
+        if ( !len( expected ) || !constantEqual( lCase( hash( arguments.accessCode, "SHA-256" ) ), expected ) ) return { allowed:false, code:"LIVE_ACCESS_DENIED" };
+        if ( !consumeRate( arguments.clientKey ) ) return { allowed:false, code:"LIVE_RATE_LIMITED" };
+        return { allowed:true, code:"LIVE_ACCESS_ALLOWED" };
+    }
+
+    private boolean function consumeRate( required string clientKey ) {
+        if ( !structKeyExists( application.boxshield, "liveRate" ) ) application.boxshield.liveRate = {};
+        var limit = max( 1, val( getSystemSetting( "MAX_LIVE_RUNS_PER_MINUTE", toString( defaultLimit ) ) ) );
+        var minuteKey = dateTimeFormat( now(), "yyyy-mm-dd-HH-NN" ) & ":" & lCase( hash( arguments.clientKey, "SHA-256" ) );
+        lock name="boxshield-live-rate" type="exclusive" timeout="3" {
+            var used = application.boxshield.liveRate[ minuteKey ] ?: 0;
+            if ( used >= limit ) return false;
+            application.boxshield.liveRate[ minuteKey ] = used + 1;
+        }
+        return true;
+    }
+
+    private boolean function constantEqual( required string leftValue, required string rightValue ) {
+        return MessageDigest.isEqual( leftValue.getBytes( StandardCharsets.UTF_8 ), rightValue.getBytes( StandardCharsets.UTF_8 ) );
+    }
+}

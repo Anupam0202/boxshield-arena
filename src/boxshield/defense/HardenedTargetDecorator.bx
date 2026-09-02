@@ -1,0 +1,20 @@
+class {
+    property any hardenedTarget;
+    property struct patch;
+
+    function init( required any target, required struct patch ) {
+        new boxshield.defense.DefenseCatalog().validate( arguments.patch );
+        variables.patch = duplicate( arguments.patch );
+        variables.hardenedTarget = arguments.target.cloneWithPolicy( arguments.patch );
+        return this;
+    }
+
+    struct function manifest() {
+        var data = hardenedTarget.manifest();
+        data.appliedPatchId = patch.id ?: "unknown";
+        return data;
+    }
+
+    struct function run( required struct testCase, required any budget ) { return hardenedTarget.run( arguments.testCase, arguments.budget ); }
+    any function cloneWithPolicy( required struct nextPatch ) { return new boxshield.defense.HardenedTargetDecorator( hardenedTarget, arguments.nextPatch ); }
+}

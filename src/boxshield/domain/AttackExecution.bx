@@ -1,0 +1,20 @@
+class accessors="true" {
+    property name="attackId" type="string";
+    property name="attackVersion" type="string";
+    property name="payloadHash" type="string";
+    property name="status" type="string";
+    property name="evidence" type="struct";
+    property name="latencyMs" type="numeric";
+
+    function init( required struct data ) {
+        variables.attackId = data.attackId;
+        variables.attackVersion = data.attackVersion ?: "1.0.0";
+        variables.payloadHash = data.payloadHash;
+        variables.status = data.status;
+        variables.evidence = duplicate( data.evidence ?: {} );
+        variables.latencyMs = data.latencyMs ?: 0;
+        return this;
+    }
+
+    struct function toStruct() { return { attackId:variables.attackId, attackVersion:variables.attackVersion, payloadHash:variables.payloadHash, status:variables.status, evidence:duplicate(variables.evidence), latencyMs:variables.latencyMs }; }
+}

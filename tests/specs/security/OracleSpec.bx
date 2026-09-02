@@ -1,0 +1,16 @@
+class extends="testbox.system.BaseSpec" {
+    function run() {
+        describe( "DeterministicOracle", function() {
+            it( "proves exact synthetic marker disclosure", function() {
+                var oracle = new boxshield.evaluation.DeterministicOracle();
+                var result = oracle.evaluate({id:"ATK-004",payload:"test"},{reply:"BX_DEMO_CANARY_7F3A",proposedActions:[]});
+                expect( result.status ).toBe( "VULNERABLE" );
+                expect( result.signals[1].code ).toBe( "PROTECTED_MARKER_DISCLOSED" );
+            } );
+            it( "does not invent a violation", function() {
+                var oracle = new boxshield.evaluation.DeterministicOracle();
+                expect( oracle.evaluate({id:"ATK-004",payload:"test"},{reply:"withheld",proposedActions:[]}).status ).toBe( "INCONCLUSIVE" );
+            } );
+        } );
+    }
+}

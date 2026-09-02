@@ -1,0 +1,28 @@
+<bx:script>
+api = new boxshield.http.ApiService();
+statusCode = 200;
+method = uCase( cgi.request_method ?: "GET" );
+if ( ![ "GET", "POST" ].findNoCase( method ) ) {
+    statusCode = 405;
+    payload = { ok:false, requestId:request.boxshieldRequestId ?: createUUID(), data:null, error:{code:"report_NOT_ALLOWED",message:"Use GET or POST for this read-only report endpoint.",retryable:false}, meta:{schemaVersion:"1.0.0"} };
+} else {
+    if ( method == "POST" ) {
+        requestData = getHTTPRequestData();
+        contentType = requestData.headers[ "content-type" ] ?: "";
+        if ( !contentType.findNoCase( "application/json" ) || len( requestData.content ?: "" ) > 262144 ) {
+            statusCode = 400;
+            payload = { ok:false, requestId:request.boxshieldRequestId ?: createUUID(), data:null, error:{code:"INVALID_REQUEST",message:"POST requires bounded application/json.",retryable:false}, meta:{schemaVersion:"1.0.0"} };
+        } else payload = api.report();
+    } else payload = api.report();
+}
+</bx:script>
+<bx:header statusCode="#statusCode#">
+<bx:content type="application/json; charset=utf-8">
+<bx:header name="Cache-Control" value="no-store">
+<bx:header name="X-Content-Type-Options" value="nosniff">
+<bx:header name="Content-Security-Policy" value="default-src 'none'; frame-ancestors 'none'; base-uri 'none'">
+<bx:header name="Referrer-Policy" value="no-referrer">
+<bx:header name="Permissions-Policy" value="camera=(), microphone=(), geolocation=(), payment=()">
+<bx:header name="Cross-Origin-Resource-Policy" value="same-origin">
+<bx:header name="X-Frame-Options" value="DENY">
+<bx:output>#jsonSerialize( payload )#</bx:output>

@@ -1,0 +1,38 @@
+class {
+    struct function loadFixture( string path=expandPath( "/data/replay-v1.json" ) ) {
+        if ( !fileExists( arguments.path ) ) throw( type="BoxShield.ReplayMissing", message="Replay fixture not found" );
+        var fixture = jsonDeserialize( fileRead( arguments.path ) );
+        if ( ( fixture.mode ?: "" ) != "RECORDED_REPLAY" ) throw( type="BoxShield.InvalidReplay", message="Fixture mode mismatch" );
+        assertPaired( fixture );
+        return fixture;
+    }
+
+    void function assertPaired( required struct fixture ) {
+        if ( fixture.schemaVersion != "1.0.0" || !isArray( fixture.results ?: "" ) || !isArray( fixture.controls ?: "" ) ) throw( type="BoxShield.InvalidReplay", message="Fixture schema mismatch" );
+        var corpus = new boxshield.evaluation.AttackCorpusService().load();
+        var attacks = {};
+        corpus.attacks.each( function( attack ) { attacks[ attack.id ] = attack; } );
+        var seen = {};
+        var allowedStatuses = [ "RESISTED", "VULNERABLE", "WARNING", "INCONCLUSIVE", "ERROR", "NOT_APPLICABLE" ];
+
+        fixture.results.each( function( row ) {
+            if ( structKeyExists( seen, row.attackId ?: "" ) || !structKeyExists( attacks, row.attackId ?: "" ) ) throw( type="BoxShield.InvalidReplay", message="Unknown or duplicate replay attack" );
+            seen[ row.attackId ] = true;
+            var expectedPayloadHash = "sha256:" & lCase( hash( attacks[ row.attackId ].payload, "SHA-256" ) );
+            if ( row.payloadHash != expectedPayloadHash || row.payloadByteLength != len( charsetDecode( attacks[ row.attackId ].payload, "utf-8" ) ) ) throw( type="BoxShield.InvalidReplay", message="Replay payload provenance mismatch" );
+            [ "baseline", "hardened" ].each( function( side ) {
+                if ( !isStruct( row[ side ] ?: "" ) || !allowedStatuses.findNoCase( row[ side ].status ?: "" ) ) throw( type="BoxShield.InvalidReplay", message="Replay outcome is invalid" );
+                if ( !len( row[ side ].sanitizedOutput ?: "" ) || row[ side ].responseHash != "sha256:" & lCase( hash( row[ side ].sanitizedOutput, "SHA-256" ) ) ) throw( type="BoxShield.InvalidReplay", message="Replay response provenance mismatch" );
+            } );
+        } );
+    }
+
+    struct function select( required struct fixture, required array attackIds, required array controlIds ) {
+        var selectedResults = fixture.results.filter( function( row ) { return attackIds.findNoCase( row.attackId ); } );
+        var selectedControls = fixture.controls.filter( function( row ) { return controlIds.findNoCase( row.controlId ); } );
+        if ( selectedResults.len() != attackIds.len() || selectedControls.len() != controlIds.len() ) throw( type="BoxShield.InvalidReplay", message="Frozen replay IDs do not match the fixture" );
+        selectedResults.sort( function( left, right ) { return attackIds.findNoCase( left.attackId ) - attackIds.findNoCase( right.attackId ); } );
+        selectedControls.sort( function( left, right ) { return controlIds.findNoCase( left.controlId ) - controlIds.findNoCase( right.controlId ); } );
+        return { results:selectedResults, controls:selectedControls };
+    }
+}

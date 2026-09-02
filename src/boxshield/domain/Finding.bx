@@ -1,0 +1,16 @@
+class accessors="true" {
+    property name="attackId" type="string";
+    property name="severity" type="string";
+    property name="status" type="string";
+    property name="signals" type="array";
+
+    function init( required struct execution ) {
+        variables.attackId = execution.attackId;
+        variables.severity = lCase( execution.severity ?: "medium" );
+        variables.status = execution.status;
+        variables.signals = duplicate( execution.evidence.signals ?: [] );
+        return this;
+    }
+
+    struct function toStruct() { return { attackId:variables.attackId, severity:variables.severity, status:variables.status, signals:duplicate(variables.signals) }; }
+}

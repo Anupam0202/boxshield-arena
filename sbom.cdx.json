@@ -1,0 +1,20 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:8fe4773c-4465-4d60-bcd7-e1813a5896d1",
+  "version": 1,
+  "metadata": {
+    "component": {"type": "application", "name": "boxshield-arena", "version": "1.1.0", "licenses": [{"license": {"id": "Apache-2.0"}}]},
+    "properties": [
+      {"name": "boxshield:runtime-evidence", "value": "Verified with BoxLang 1.17.1+59, bx-ai 3.4.0+18, and TestBox 7.0.0+19."},
+      {"name": "boxshield:container-pin-status", "value": "Resolve and test an immutable MiniServer digest before production promotion."}
+    ]
+  },
+  "components": [
+    {"type": "framework", "name": "BoxLang", "group": "Ortus Solutions", "version": "1.17.1+59", "scope": "required"},
+    {"type": "library", "name": "bx-ai", "group": "Ortus Solutions", "version": "3.4.0+18", "scope": "required"},
+    {"type": "library", "name": "TestBox", "group": "Ortus Solutions", "version": "7.0.0+19", "scope": "optional"},
+    {"type": "container", "name": "ortussolutions/boxlang", "version": "miniserver", "scope": "required"}
+  ],
+  "dependencies": [{"ref": "urn:uuid:8fe4773c-4465-4d60-bcd7-e1813a5896d1", "dependsOn": []}]
+}

@@ -1,0 +1,45 @@
+class {
+    property numeric maxBodyBytes default=262144;
+    property array allowedSuites default=[ "quick", "full" ];
+    property array allowedModes default=[ "replay", "mock", "live" ];
+
+    struct function validateEvaluation( required struct payload ) {
+        assertBounded( arguments.payload );
+        assertOnlyKeys( arguments.payload, [ "suite", "mode", "targetId", "accessCode" ] );
+        var suite = lCase( payload.suite ?: "quick" );
+        var mode  = lCase( payload.mode ?: "replay" );
+        if ( !allowedSuites.findNoCase( suite ) ) throw( type="BoxShield.InvalidRequest", message="Unknown suite" );
+        if ( !allowedModes.findNoCase( mode ) ) throw( type="BoxShield.InvalidRequest", message="Unknown mode" );
+        if ( ( payload.targetId ?: "acme-support" ) != "acme-support" ) throw( type="BoxShield.InvalidTarget", message="Remote and unknown targets are disabled" );
+        if ( len( payload.accessCode ?: "" ) > 256 ) throw( type="BoxShield.InvalidRequest", message="Access code exceeds safe bound" );
+        return { suite:suite, mode:mode, targetId:"acme-support", accessCode:payload.accessCode ?: "" };
+    }
+
+    struct function validateDefend( required struct payload ) {
+        assertBounded( arguments.payload );
+        assertOnlyKeys( arguments.payload, [ "capsule" ] );
+        if ( !isStruct( payload.capsule ?: "" ) ) throw( type="BoxShield.InvalidRequest", message="A run capsule is required" );
+        return { capsule:payload.capsule };
+    }
+
+    struct function validateReplay( required struct payload ) {
+        assertBounded( arguments.payload );
+        assertOnlyKeys( arguments.payload, [ "capsule", "approved", "approvalNonce", "approvalStatement" ] );
+        if ( !isStruct( payload.capsule ?: "" ) ) throw( type="BoxShield.InvalidRequest", message="An approval capsule is required" );
+        if ( !( payload.approved ?: false ) ) throw( type="BoxShield.ApprovalRequired", message="Explicit approval is required" );
+        if ( ( payload.approvalStatement ?: "" ) != "APPROVE_CLONE_ONLY" ) throw( type="BoxShield.ApprovalRequired", message="Clone-only approval statement is required" );
+        var nonce = payload.approvalNonce ?: "";
+        if ( !len( trim( nonce ) ) || len( nonce ) > 128 ) throw( type="BoxShield.InvalidRequest", message="Approval nonce is invalid" );
+        return { capsule:payload.capsule, approved:true, approvalNonce:nonce, approvalStatement:"APPROVE_CLONE_ONLY" };
+    }
+
+    private void function assertBounded( required struct payload ) {
+        if ( len( jsonSerialize( arguments.payload ) ) > maxBodyBytes ) throw( type="BoxShield.RequestTooLarge", message="Request exceeds 256 KB" );
+    }
+
+    private void function assertOnlyKeys( required struct payload, required array allowed ) {
+        payload.keyArray().each( function( key ) {
+            if ( !allowed.findNoCase( key ) ) throw( type="BoxShield.InvalidRequest", message="Unknown request field" );
+        } );
+    }
+}

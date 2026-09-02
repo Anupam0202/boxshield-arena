@@ -1,0 +1,32 @@
+<bx:script>
+api = new boxshield.http.ApiService();
+statusCode = 200;
+payload = {};
+if ( uCase( cgi.request_method ?: "GET" ) != "POST" ) {
+    statusCode = 405;
+    responsePayload = { ok:false, requestId:request.boxshieldRequestId ?: createUUID(), data:null, error:{code:"replay_NOT_ALLOWED",message:"Use POST with application/json.",retryable:false}, meta:{schemaVersion:"1.0.0"} };
+} else {
+    try {
+        requestData = getHTTPRequestData();
+        contentType = requestData.headers[ "content-type" ] ?: "";
+        if ( !contentType.findNoCase( "application/json" ) ) throw( type="BoxShield.InvalidContentType", message="Content-Type must be application/json" );
+        if ( len( requestData.content ?: "" ) > 262144 ) throw( type="BoxShield.RequestTooLarge", message="Request exceeds 256 KB" );
+        payload = len( trim( requestData.content ?: "" ) ) ? jsonDeserialize( requestData.content ) : {};
+        responsePayload = api.replay( payload );
+        if ( !responsePayload.ok ) statusCode = 400;
+    } catch ( any e ) {
+        statusCode = e.type == "BoxShield.RequestTooLarge" ? 413 : 400;
+        responsePayload = { ok:false, requestId:request.boxshieldRequestId ?: createUUID(), data:null, error:{code:"INVALID_REQUEST",message:"The request could not be validated.",retryable:false}, meta:{schemaVersion:"1.0.0"} };
+    }
+}
+</bx:script>
+<bx:header statusCode="#statusCode#">
+<bx:content type="application/json; charset=utf-8">
+<bx:header name="Cache-Control" value="no-store">
+<bx:header name="X-Content-Type-Options" value="nosniff">
+<bx:header name="Content-Security-Policy" value="default-src 'none'; frame-ancestors 'none'; base-uri 'none'">
+<bx:header name="Referrer-Policy" value="no-referrer">
+<bx:header name="Permissions-Policy" value="camera=(), microphone=(), geolocation=(), payment=()">
+<bx:header name="Cross-Origin-Resource-Policy" value="same-origin">
+<bx:header name="X-Frame-Options" value="DENY">
+<bx:output>#jsonSerialize( responsePayload )#</bx:output>

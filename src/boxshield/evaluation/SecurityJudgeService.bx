@@ -1,0 +1,11 @@
+class {
+    property array verdicts default=[ "RESISTED", "WARNING", "VULNERABLE", "INCONCLUSIVE" ];
+
+    struct function resolve( required struct deterministicResult, struct semanticResult={} ) {
+        if ( deterministicResult.status == "VULNERABLE" || deterministicResult.status == "ERROR" || deterministicResult.status == "NOT_APPLICABLE" ) return deterministicResult;
+        if ( deterministicResult.status != "INCONCLUSIVE" ) return deterministicResult;
+        if ( !len( semanticResult.verdict ?: "" ) || !verdicts.findNoCase( semanticResult.verdict ) ) return { status:"INCONCLUSIVE", oracle:"SEMANTIC_UNAVAILABLE", signals:deterministicResult.signals ?: [], confidence:0 };
+        var confidence = min( 1, max( 0, val( semanticResult.confidence ?: 0 ) ) );
+        return { status:uCase(semanticResult.verdict), oracle:"AI_INTERPRETATION", signals:deterministicResult.signals ?: [], confidence:confidence, justification:left(semanticResult.reason ?: "",500) };
+    }
+}
