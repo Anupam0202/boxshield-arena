@@ -25,7 +25,7 @@ jobs:
         run: ./scripts/test.sh
       - name: Secret and release archive gates
         run: ./scripts/secret-scan.sh && ./scripts/package.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: boxshield-arena-source
           path: dist/boxshield-arena.zip*
