@@ -1,7 +1,8 @@
 FROM ortussolutions/boxlang:miniserver
 WORKDIR /app
 COPY . /app
-RUN install-bx-module bx-ai@3.4.0 --local
+RUN BOXLANG_INSTALL_HOME=/usr/local/boxlang \
+    install-bx-module bx-ai@3.4.0 --local
 ENV HOST=0.0.0.0 PORT=8080 BOXLANG_HOST=0.0.0.0 BOXLANG_WEBROOT=/app BOXLANG_HEALTH_CHECK=true MAX_MEMORY=1536m MIN_MEMORY=256m
 EXPOSE 8080
 STOPSIGNAL SIGTERM
